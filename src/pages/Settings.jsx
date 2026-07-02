@@ -8,9 +8,21 @@ import { CONF_LABEL } from "../lib/logic.js";
 import { pct } from "../lib/format.js";
 
 export default function Settings() {
-  const { db, uname, krProgress } = useApp();
+  const { db, me, uname, krProgress, isAdmin, deleteUser } = useApp();
   const modals = useModals();
   const dlg = useDialog();
+
+  async function handleDelete(u) {
+    const ok = await dlg.confirm(
+      `Delete ${u.name} (${u.email})? This revokes their login and removes their account permanently. Their tasks stay but become unassigned.`
+    );
+    if (!ok) return;
+    try {
+      await deleteUser(u.id);
+    } catch (e) {
+      dlg.alert("Couldn't delete this user: " + (e.message || e));
+    }
+  }
 
   const explainAdd = () =>
     dlg.alert(
@@ -56,15 +68,29 @@ export default function Settings() {
                     <span className="tag st-cancelled">inactive</span>
                   )}
                 </td>
-                <td>
+                <td style={{ display: "flex", gap: 6 }}>
                   <button className="btn sm ghost" onClick={() => modals.openUser(u.id)}>
                     Edit
                   </button>
+                  {isAdmin() && u.id !== me.id && (
+                    <button
+                      className="btn sm ghost"
+                      style={{ color: "var(--red)", borderColor: "#eab9b9" }}
+                      onClick={() => handleDelete(u)}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {isAdmin() && (
+          <div className="hint" style={{ marginTop: 8 }}>
+            Only admins see the Delete control. Deleting a user revokes their login completely.
+          </div>
+        )}
       </div>
 
       <div className="panel">

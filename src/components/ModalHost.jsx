@@ -8,6 +8,7 @@ import ProjectModal from "./modals/ProjectModal.jsx";
 import ObjectiveModal from "./modals/ObjectiveModal.jsx";
 import KRModal from "./modals/KRModal.jsx";
 import ScoreModal from "./modals/ScoreModal.jsx";
+import ImportTasksModal from "./modals/ImportTasksModal.jsx";
 
 const ModalCtx = createContext(null);
 export const useModals = () => useContext(ModalCtx);
@@ -27,6 +28,7 @@ export function ModalHost({ children }) {
       openObjective: () => setM({ t: "objective" }),
       openKR: (objId) => setM({ t: "kr", objId }),
       openScore: (krId) => setM({ t: "score", krId }),
+      openImport: () => setM({ t: "import" }),
       close: () => setM(null),
     }),
     []
@@ -44,6 +46,7 @@ export function ModalHost({ children }) {
       {m?.t === "objective" && <ObjectiveModal onClose={api.close} />}
       {m?.t === "kr" && <KRModal objId={m.objId} onClose={api.close} />}
       {m?.t === "score" && <ScoreModal krId={m.krId} onClose={api.close} />}
+      {m?.t === "import" && <ImportTasksModal onClose={api.close} />}
     </ModalCtx.Provider>
   );
 }

@@ -100,8 +100,7 @@ export default function Login() {
               New here?{" "}
               <button className="linkbtn" onClick={() => { setMode("signup"); setErr(""); }}>
                 Create an account
-              </button>{" "}
-              (the first account becomes the admin)
+              </button>
             </>
           ) : (
             <>
@@ -111,16 +110,6 @@ export default function Login() {
               </button>
             </>
           )}
-        </div>
-
-        <div className="sample-box">
-          <strong>Demo accounts</strong> (password <code>cadence123</code>) if you ran the seed:
-          <br />
-          <code>admin@team.com</code> — admin · <code>manager@team.com</code> — manager
-          <br />
-          <code>neha@team.com</code>, <code>amit@team.com</code>, <code>vithika@team.com</code> — members
-          <br />
-          <code>viewer@team.com</code> — viewer
         </div>
       </div>
     </div>

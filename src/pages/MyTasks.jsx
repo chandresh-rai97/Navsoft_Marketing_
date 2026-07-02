@@ -61,9 +61,14 @@ export default function MyTasks() {
         title="My Tasks"
         sub="Everything assigned to you. Filter by time, group by project or Key Result."
         actions={
-          <button className="btn" onClick={() => modals.openTask(null)}>
-            + Task
-          </button>
+          <>
+            <button className="btn ghost" onClick={() => modals.openImport()}>
+              Import from spreadsheet
+            </button>
+            <button className="btn" onClick={() => modals.openTask(null)}>
+              + Task
+            </button>
+          </>
         }
       />
       <div className="filters">

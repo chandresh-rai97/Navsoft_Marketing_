@@ -572,6 +572,19 @@ export function AppDataProvider({ children }) {
     [audit, refresh]
   );
 
+  // Admin-only: remove a user entirely (revokes their login). Runs the
+  // admin_delete_user() SECURITY DEFINER function, which re-checks the caller
+  // is an admin at the database level.
+  const deleteUser = useCallback(
+    async (id) => {
+      const { error } = await supabase.rpc("admin_delete_user", { target: id });
+      if (error) throw error;
+      audit("user", id, "deleted", null, null);
+      await refresh();
+    },
+    [audit, refresh]
+  );
+
   // =========================================================================
   // WEEKLY PRIORITIES
   // =========================================================================
@@ -581,6 +594,153 @@ export function AppDataProvider({ children }) {
       await refresh();
     },
     [refresh]
+  );
+
+  // =========================================================================
+  // CSV IMPORT (My Tasks → Import from spreadsheet)
+  // =========================================================================
+  const STATUS_FROM_LABEL = {
+    "": "not_started",
+    "not started": "not_started",
+    "in progress": "in_progress",
+    blocked: "blocked",
+    done: "done",
+  };
+  const RECURRENCE_FROM_LABEL = { "": "none", none: "none", daily: "daily", weekly: "weekly" };
+
+  const importTasks = useCallback(
+    async (rows) => {
+      const summary = { created: 0, updated: 0, skipped: [] };
+
+      // Read a column ignoring header case/spacing (e.g. "Key Result" / "keyresult").
+      const val = (obj, name) => {
+        const target = name.replace(/\s+/g, "").toLowerCase();
+        const key = Object.keys(obj).find(
+          (k) => k.replace(/\s+/g, "").toLowerCase() === target
+        );
+        return key ? (obj[key] ?? "").toString().trim() : "";
+      };
+      const friendly = (e) => {
+        const m = e?.message || String(e);
+        if (/row-level security/i.test(m))
+          return "you don't have permission (check the assignee and your role)";
+        return m;
+      };
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const rowNum = i + 2; // +1 for header, +1 for 1-based rows
+        const skip = (reason) => summary.skipped.push({ row: rowNum, reason });
+
+        const taskId = val(r, "Task ID");
+        const title = val(r, "Title");
+        const description = val(r, "Description");
+        const projectName = val(r, "Project");
+        const krTitle = val(r, "Key Result");
+        const assigneeEmail = val(r, "Assignee Email");
+        const dueDate = val(r, "Due Date");
+        const statusLabel = val(r, "Status").toLowerCase();
+        const recurrenceLabel = val(r, "Recurrence").toLowerCase();
+
+        if (!title) {
+          skip("Title is blank");
+          continue;
+        }
+        const project = db.projects.find(
+          (p) => p.name.trim().toLowerCase() === projectName.toLowerCase()
+        );
+        if (!projectName) {
+          skip("Project is blank");
+          continue;
+        }
+        if (!project) {
+          skip(`Project "${projectName}" was not found in the app`);
+          continue;
+        }
+        const kr = db.keyResults.find(
+          (k) => k.title.trim().toLowerCase() === krTitle.toLowerCase()
+        );
+        if (!krTitle) {
+          skip("Key Result is blank");
+          continue;
+        }
+        if (!kr) {
+          skip(`Key Result "${krTitle}" was not found in the app`);
+          continue;
+        }
+        const assignee = db.users.find(
+          (u) => u.email.trim().toLowerCase() === assigneeEmail.toLowerCase()
+        );
+        if (!assigneeEmail) {
+          skip("Assignee Email is blank");
+          continue;
+        }
+        if (!assignee) {
+          skip(`No user with email "${assigneeEmail}" was found`);
+          continue;
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+          skip(`Due Date "${dueDate}" must look like YYYY-MM-DD`);
+          continue;
+        }
+        if (!(statusLabel in STATUS_FROM_LABEL)) {
+          skip(`Status "${statusLabel}" is not one of Not started / In progress / Blocked / Done`);
+          continue;
+        }
+        if (!(recurrenceLabel in RECURRENCE_FROM_LABEL)) {
+          skip(`Recurrence "${recurrenceLabel}" is not one of None / Daily / Weekly`);
+          continue;
+        }
+        const status = STATUS_FROM_LABEL[statusLabel];
+        const recurrence = RECURRENCE_FROM_LABEL[recurrenceLabel];
+
+        const payload = {
+          title,
+          description,
+          assignee_user_id: assignee.id,
+          project_id: project.id,
+          key_result_id: kr.id,
+          due_date: dueDate,
+          planned_for_date: dueDate,
+          status,
+          recurrence,
+        };
+        if (status === "done") {
+          payload.completed_at = nowIso();
+          payload.completed_by_user_id = me.id;
+        }
+
+        if (taskId) {
+          const existing = db.tasks.find((t) => t.id === taskId);
+          if (!existing) {
+            skip(`Task ID "${taskId}" was not found — nothing to update`);
+            continue;
+          }
+          try {
+            await updateRow("tasks", taskId, payload); // keeps original_due_date intact
+            audit("task", taskId, "imported_update", null, null);
+            summary.updated++;
+          } catch (e) {
+            skip(`couldn't update — ${friendly(e)}`);
+          }
+        } else {
+          try {
+            const created = await insertRow("tasks", {
+              ...payload,
+              original_due_date: dueDate, // on-time baseline = the Due Date
+            });
+            audit("task", created.id, "imported_create", null, null);
+            summary.created++;
+          } catch (e) {
+            skip(`couldn't create — ${friendly(e)}`);
+          }
+        }
+      }
+
+      await refresh();
+      return summary;
+    },
+    [db.projects, db.keyResults, db.users, db.tasks, me, audit, refresh]
   );
 
   const value = {
@@ -640,8 +800,11 @@ export function AppDataProvider({ children }) {
     createProject,
     updateProject,
     updateUser,
+    deleteUser,
     // weekly
     createWeeklyPriority,
+    // csv import
+    importTasks,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
