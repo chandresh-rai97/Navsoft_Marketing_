@@ -12,6 +12,7 @@ import {
   insertRow,
   updateRow,
   upsertRow,
+  deleteRow,
   writeAudit,
   runCarrySweep,
 } from "../lib/db.js";
@@ -254,7 +255,8 @@ export function AppDataProvider({ children }) {
           description: form.description,
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
-          key_result_id: form.key_result_id,
+          key_result_id: form.key_result_id || null, // Key Result is optional
+          depends_on_task_id: form.depends_on_task_id || null,
           planned_for_date: form.planned_for_date,
           client_facing: form.client_facing,
           recurrence: form.recurrence,
@@ -290,7 +292,8 @@ export function AppDataProvider({ children }) {
           description: form.description,
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
-          key_result_id: form.key_result_id,
+          key_result_id: form.key_result_id || null, // Key Result is optional
+          depends_on_task_id: form.depends_on_task_id || null,
           status: form.status === "done" ? "not_started" : form.status,
           due_date: form.due_date,
           original_due_date: form.due_date,
@@ -342,6 +345,16 @@ export function AppDataProvider({ children }) {
     async (id, reason) => {
       await updateRow("tasks", id, { status: "cancelled", cancelled_reason: reason });
       audit("task", id, "cancelled", null, { reason });
+      await refresh();
+    },
+    [audit, refresh]
+  );
+
+  // Admin-only hard delete (RLS tasks_delete is admin-only too).
+  const deleteTask = useCallback(
+    async (id) => {
+      await deleteRow("tasks", id);
+      audit("task", id, "deleted", null, null);
       await refresh();
     },
     [audit, refresh]
@@ -657,16 +670,16 @@ export function AppDataProvider({ children }) {
           skip(`Project "${projectName}" was not found in the app`);
           continue;
         }
-        const kr = db.keyResults.find(
-          (k) => k.title.trim().toLowerCase() === krTitle.toLowerCase()
-        );
-        if (!krTitle) {
-          skip("Key Result is blank");
-          continue;
-        }
-        if (!kr) {
-          skip(`Key Result "${krTitle}" was not found in the app`);
-          continue;
+        // Key Result is OPTIONAL. Blank = no KR; a name that doesn't match = skip.
+        let kr = null;
+        if (krTitle) {
+          kr = db.keyResults.find(
+            (k) => k.title.trim().toLowerCase() === krTitle.toLowerCase()
+          );
+          if (!kr) {
+            skip(`Key Result "${krTitle}" was not found in the app`);
+            continue;
+          }
         }
         const assignee = db.users.find(
           (u) => u.email.trim().toLowerCase() === assigneeEmail.toLowerCase()
@@ -699,7 +712,7 @@ export function AppDataProvider({ children }) {
           description,
           assignee_user_id: assignee.id,
           project_id: project.id,
-          key_result_id: kr.id,
+          key_result_id: kr ? kr.id : null,
           due_date: dueDate,
           planned_for_date: dueDate,
           status,
@@ -782,6 +795,7 @@ export function AppDataProvider({ children }) {
     quickToggle,
     acceptTask,
     cancelTask,
+    deleteTask,
     reassignTasks,
     rescheduleTasks,
     // blockers

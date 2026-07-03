@@ -15,12 +15,25 @@ const COMMAND_NAV = [
   ["dashboard", "Command Dashboard"],
   ["alltasks", "All Tasks"],
   ["people", "People / Workload"],
-  ["okrtree", "OKR Tree"],
   ["projects", "Projects"],
   ["grid", "Project × KR Grid"],
   ["standup", "Standup Board"],
   ["reviews", "Reviews"],
   ["settings", "Admin Settings"],
+];
+
+// Viewer sees everything an admin can, read-only (no personal My* tabs or the
+// admin management console).
+const VIEWER_NAV = [
+  ["dashboard", "Dashboard"],
+  ["alltasks", "All Tasks"],
+  ["people", "People / Workload"],
+  ["projects", "Projects"],
+  ["grid", "Project × KR Grid"],
+  ["standup", "Standup Board"],
+  ["reviews", "Reviews"],
+  ["goals", "Goals"],
+  ["blockers", "Blockers"],
 ];
 
 function navConfig(role) {
@@ -31,14 +44,7 @@ function navConfig(role) {
     };
   }
   if (role === "viewer") {
-    return {
-      Watch: [
-        ["dashboard", "Dashboard"],
-        ["okrtree", "OKR Tree"],
-        ["projects", "Projects"],
-        ["grid", "Project × KR Grid"],
-      ],
-    };
+    return { Watch: VIEWER_NAV };
   }
   return { "Your work": MEMBER_NAV };
 }

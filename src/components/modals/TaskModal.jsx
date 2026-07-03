@@ -15,6 +15,7 @@ export default function TaskModal({ id, onClose }) {
     me,
     seesAll,
     isManager,
+    isViewer,
     canEditTask,
     activeUsers,
     activeProjects,
@@ -32,6 +33,7 @@ export default function TaskModal({ id, onClose }) {
     return null;
   }
   const editing = !!existing;
+  const readOnly = isViewer(); // viewers can look but never change anything
   const assignees = seesAll() ? activeUsers() : [me];
 
   const [form, setForm] = useState(() => ({
@@ -40,7 +42,8 @@ export default function TaskModal({ id, onClose }) {
     assignee_user_id: existing?.assignee_user_id || me.id,
     status: existing?.status && existing.status !== "carried_forward" ? existing.status : "not_started",
     project_id: existing?.project_id || activeProjects()[0]?.id || "",
-    key_result_id: existing?.key_result_id || db.keyResults[0]?.id || "",
+    key_result_id: existing?.key_result_id || "", // Key Result is optional
+    depends_on_task_id: existing?.depends_on_task_id || "",
     due_date: existing?.due_date || todayStr(),
     planned_for_date: existing?.planned_for_date || todayStr(),
     client_facing: !!existing?.client_facing,
@@ -60,7 +63,6 @@ export default function TaskModal({ id, onClose }) {
     const k = KR(krId);
     if ((k && k.kr_type === "committed") || client) set("acceptance_required", true);
   };
-
   const onKr = (v) => {
     set("key_result_id", v);
     autoAccept(v, form.client_facing);
@@ -70,12 +72,15 @@ export default function TaskModal({ id, onClose }) {
     autoAccept(form.key_result_id, v);
   };
 
-  const canWrite = !editing || canEditTask(existing);
+  const canWrite = !readOnly && (!editing || canEditTask(existing));
+
+  const dependsTasks = [...db.tasks]
+    .filter((x) => x.id !== existing?.id)
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   async function handleSave() {
     if (!form.title.trim()) return dlg.alert("Give the task a title.");
-    if (!form.project_id || !form.key_result_id)
-      return dlg.alert("Every task must have a project and a Key Result.");
+    if (!form.project_id) return dlg.alert("Every task must have a project.");
     setBusy(true);
     try {
       let reason = "";
@@ -131,56 +136,38 @@ export default function TaskModal({ id, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <h2>{editing ? "Edit task" : "New task"}</h2>
+      <h2>{editing ? (readOnly ? "Task" : "Edit task") : "New task"}</h2>
 
       {showAccept && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-          <div className="note" style={{ margin: 0, flex: 1 }}>
-            This task is awaiting acceptance.
-          </div>
-          <button className="btn accent" onClick={() => doAccept(true)}>
-            Accept
-          </button>
-          <button className="btn ghost" onClick={() => doAccept(false)}>
-            Send back
-          </button>
+          <div className="note" style={{ margin: 0, flex: 1 }}>This task is awaiting acceptance.</div>
+          <button className="btn accent" onClick={() => doAccept(true)}>Accept</button>
+          <button className="btn ghost" onClick={() => doAccept(false)}>Send back</button>
         </div>
       )}
 
       <div className="field">
         <label>Title</label>
-        <input
-          value={form.title}
-          onChange={(e) => set("title", e.target.value)}
-          placeholder="What needs doing?"
-        />
+        <input value={form.title} disabled={readOnly} onChange={(e) => set("title", e.target.value)} placeholder="What needs doing?" />
       </div>
       <div className="field">
         <label>Description</label>
-        <textarea value={form.description} onChange={(e) => set("description", e.target.value)} />
+        <textarea value={form.description} disabled={readOnly} onChange={(e) => set("description", e.target.value)} />
       </div>
       <div className="row2">
         <div className="field">
           <label>Assignee</label>
-          <select
-            value={form.assignee_user_id}
-            disabled={!seesAll()}
-            onChange={(e) => set("assignee_user_id", e.target.value)}
-          >
+          <select value={form.assignee_user_id} disabled={readOnly || !seesAll()} onChange={(e) => set("assignee_user_id", e.target.value)}>
             {assignees.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
+              <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
         </div>
         <div className="field">
           <label>Status</label>
-          <select value={form.status} onChange={(e) => set("status", e.target.value)}>
+          <select value={form.status} disabled={readOnly} onChange={(e) => set("status", e.target.value)}>
             {EDITABLE_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </select>
         </div>
@@ -188,65 +175,60 @@ export default function TaskModal({ id, onClose }) {
       <div className="row2">
         <div className="field">
           <label>Project *</label>
-          <select value={form.project_id} onChange={(e) => set("project_id", e.target.value)}>
+          <select value={form.project_id} disabled={readOnly} onChange={(e) => set("project_id", e.target.value)}>
             <option value="">— pick —</option>
             {activeProjects().map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         </div>
         <div className="field">
-          <label>Key Result *</label>
-          <select value={form.key_result_id} onChange={(e) => onKr(e.target.value)}>
-            <option value="">— pick —</option>
+          <label>Key Result (optional)</label>
+          <select value={form.key_result_id} disabled={readOnly} onChange={(e) => onKr(e.target.value)}>
+            <option value="">— none —</option>
             {db.keyResults.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.title}
-              </option>
+              <option key={k.id} value={k.id}>{k.title}</option>
             ))}
           </select>
         </div>
+      </div>
+      <div className="field">
+        <label>Depends on (optional)</label>
+        <select value={form.depends_on_task_id} disabled={readOnly} onChange={(e) => set("depends_on_task_id", e.target.value)}>
+          <option value="">— none —</option>
+          {dependsTasks.map((x) => (
+            <option key={x.id} value={x.id}>{x.title}</option>
+          ))}
+        </select>
       </div>
       <div className="row2">
         <div className="field">
           <label>Due date</label>
-          <input type="date" value={form.due_date} onChange={(e) => set("due_date", e.target.value)} />
+          <input type="date" value={form.due_date} disabled={readOnly} onChange={(e) => set("due_date", e.target.value)} />
         </div>
         <div className="field">
           <label>Planned for</label>
-          <input
-            type="date"
-            value={form.planned_for_date}
-            onChange={(e) => set("planned_for_date", e.target.value)}
-          />
+          <input type="date" value={form.planned_for_date} disabled={readOnly} onChange={(e) => set("planned_for_date", e.target.value)} />
         </div>
       </div>
       {editing && existing.due_date !== existing.original_due_date && (
         <div className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-          On-time baseline (original due): <strong>{fmtDate(existing.original_due_date)}</strong> ·
-          moved {existing.due_date_change_count}×
+          On-time baseline (original due): <strong>{fmtDate(existing.original_due_date)}</strong> · moved {existing.due_date_change_count}×
         </div>
       )}
       <div className="row2">
         <div className="field">
           <label>Client-facing</label>
-          <select
-            value={form.client_facing ? "1" : "0"}
-            onChange={(e) => onClient(e.target.value === "1")}
-          >
+          <select value={form.client_facing ? "1" : "0"} disabled={readOnly} onChange={(e) => onClient(e.target.value === "1")}>
             <option value="0">No</option>
             <option value="1">Yes</option>
           </select>
         </div>
         <div className="field">
           <label>Recurrence</label>
-          <select value={form.recurrence} onChange={(e) => set("recurrence", e.target.value)}>
+          <select value={form.recurrence} disabled={readOnly} onChange={(e) => set("recurrence", e.target.value)}>
             {["none", "daily", "weekly"].map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+              <option key={r} value={r}>{r}</option>
             ))}
           </select>
         </div>
@@ -260,44 +242,44 @@ export default function TaskModal({ id, onClose }) {
               <input
                 type="checkbox"
                 checked={d.done}
-                onChange={(e) =>
-                  setDod((arr) => arr.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)))
-                }
+                disabled={readOnly}
+                onChange={(e) => setDod((arr) => arr.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)))}
               />
               <span style={{ flex: 1 }}>{d.text}</span>
-              <span
-                className="danger-link"
-                onClick={() => setDod((arr) => arr.filter((_, j) => j !== i))}
-              >
-                remove
-              </span>
+              {!readOnly && (
+                <span className="danger-link" onClick={() => setDod((arr) => arr.filter((_, j) => j !== i))}>
+                  remove
+                </span>
+              )}
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          <input
-            placeholder="Add a checklist item"
-            value={newDod}
-            style={{ flex: 1 }}
-            onChange={(e) => setNewDod(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newDod.trim()) {
+        {!readOnly && (
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <input
+              placeholder="Add a checklist item"
+              value={newDod}
+              style={{ flex: 1 }}
+              onChange={(e) => setNewDod(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newDod.trim()) {
+                  setDod((a) => [...a, { text: newDod.trim(), done: false }]);
+                  setNewDod("");
+                }
+              }}
+            />
+            <button
+              className="btn sm ghost"
+              onClick={() => {
+                if (!newDod.trim()) return;
                 setDod((a) => [...a, { text: newDod.trim(), done: false }]);
                 setNewDod("");
-              }
-            }}
-          />
-          <button
-            className="btn sm ghost"
-            onClick={() => {
-              if (!newDod.trim()) return;
-              setDod((a) => [...a, { text: newDod.trim(), done: false }]);
-              setNewDod("");
-            }}
-          >
-            Add
-          </button>
-        </div>
+              }}
+            >
+              Add
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="field">
@@ -306,6 +288,7 @@ export default function TaskModal({ id, onClose }) {
             type="checkbox"
             style={{ width: "auto" }}
             checked={form.acceptance_required}
+            disabled={readOnly}
             onChange={(e) => set("acceptance_required", e.target.checked)}
           />
           Requires acceptance before it counts as done
@@ -314,14 +297,10 @@ export default function TaskModal({ id, onClose }) {
 
       <div className="modal-actions">
         {editing && canWrite && (
-          <button className="danger-link" onClick={handleCancelTask}>
-            Cancel task
-          </button>
+          <button className="danger-link" onClick={handleCancelTask}>Cancel task</button>
         )}
         <div style={{ flex: 1 }} />
-        <button className="btn ghost" onClick={onClose}>
-          Close
-        </button>
+        <button className="btn ghost" onClick={onClose}>Close</button>
         {canWrite && (
           <button className="btn" onClick={handleSave} disabled={busy}>
             {busy ? "Saving…" : "Save"}

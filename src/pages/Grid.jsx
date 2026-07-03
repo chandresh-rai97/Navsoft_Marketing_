@@ -1,7 +1,6 @@
 import React from "react";
 import { useApp } from "../context/AppData.jsx";
 import { useNav } from "../context/Nav.jsx";
-import PageHead from "../components/PageHead.jsx";
 import { ProjectDot } from "../components/TaskRow.jsx";
 import { OPEN_STATUSES } from "../lib/logic.js";
 import { pct } from "../lib/format.js";
@@ -36,10 +35,6 @@ export default function Grid() {
 
   return (
     <>
-      <PageHead
-        title="Project × KR Grid"
-        sub="The model, literally: projects are rows, Key Results are columns, each cell is the work in that intersection. Read a row to judge a workstream, a column to judge a goal."
-      />
       <div className="panel matrix">
         <table>
           <thead>

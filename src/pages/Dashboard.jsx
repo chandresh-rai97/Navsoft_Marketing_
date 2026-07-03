@@ -1,69 +1,51 @@
 import React from "react";
 import { useApp } from "../context/AppData.jsx";
-import { useNav } from "../context/Nav.jsx";
-import { useModals } from "../components/ModalHost.jsx";
 import PageHead from "../components/PageHead.jsx";
-import { OPEN_STATUSES, CARRY_THRESHOLD, CONF_LABEL } from "../lib/logic.js";
-import { todayStr, daysSince, pct } from "../lib/format.js";
+import { ProjectDot } from "../components/TaskRow.jsx";
+import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
+import { pct } from "../lib/format.js";
 
 export default function Dashboard() {
-  const { db, uname, activeUsers, krProgress, isOverdue, MOVE_REASON_AFTER } = useApp();
-  const { navigate } = useNav();
-  const modals = useModals();
-  const t = todayStr();
+  const { db, activeUsers, taskDone, onTime, isOverdue } = useApp();
 
-  const dueToday = db.tasks.filter((x) => x.due_date === t && OPEN_STATUSES.includes(x.status)).length;
-  const overdue = db.tasks.filter((x) => isOverdue(x)).length;
-  const blocked = db.tasks.filter((x) => x.status === "blocked").length;
-  const carried3 = db.tasks.filter(
-    (x) => OPEN_STATUSES.includes(x.status) && x.carry_forward_count >= CARRY_THRESHOLD
-  ).length;
-  const pending = db.tasks.filter((x) => x.status === "done_pending_acceptance").length;
+  const notCancelled = db.tasks.filter((t) => t.status !== "cancelled");
+  const allTasks = notCancelled.length;
+  const pending = db.tasks.filter((t) => t.status === "not_started").length;
+  const overdue = db.tasks.filter((t) => isOverdue(t)).length;
+  const inProgress = db.tasks.filter((t) => t.status === "in_progress").length;
 
-  const attn = [];
-  db.tasks
-    .filter((x) => OPEN_STATUSES.includes(x.status) && x.carry_forward_count >= CARRY_THRESHOLD)
-    .forEach((x) =>
-      attn.push({
-        ico: "↻",
-        node: (
-          <span>
-            <strong>{x.title}</strong> pushed {x.carry_forward_count}× — {uname(x.assignee_user_id)}
-          </span>
-        ),
-        onClick: () => modals.openTask(x.id),
-      })
-    );
-  db.blockers
-    .filter((b) => b.status === "open" && daysSince(b.created_at) >= 2)
-    .forEach((b) =>
-      attn.push({
-        ico: "⛔",
-        node: <span>Blocker aging {daysSince(b.created_at)}d — {b.description.slice(0, 60)}</span>,
-        onClick: () => navigate("blockers"),
-      })
-    );
-  db.keyResults
-    .filter((k) => k.confidence !== "on_track")
-    .forEach((k) =>
-      attn.push({
-        ico: "🎯",
-        node: <span><strong>{k.title}</strong> is {CONF_LABEL[k.confidence].toLowerCase()}</span>,
-        onClick: () => navigate("okrtree", k.id),
-      })
-    );
-  db.tasks
-    .filter((x) => x.due_date_change_count >= MOVE_REASON_AFTER && OPEN_STATUSES.includes(x.status))
-    .forEach((x) =>
-      attn.push({
-        ico: "📅",
-        node: <span><strong>{x.title}</strong> moved {x.due_date_change_count}×</span>,
-        onClick: () => modals.openTask(x.id),
-      })
-    );
+  // (b) Who's lagging behind
+  const members = activeUsers().filter((u) => u.role !== "viewer");
+  const lagging = members
+    .map((u) => {
+      const mine = db.tasks.filter((t) => t.assignee_user_id === u.id);
+      const od = mine.filter((t) => isOverdue(t)).length;
+      const carried3 = mine.filter(
+        (t) => OPEN_STATUSES.includes(t.status) && t.carry_forward_count >= CARRY_THRESHOLD
+      ).length;
+      const openBlockers = db.blockers.filter(
+        (b) => b.raised_by_user_id === u.id && b.status === "open"
+      ).length;
+      const done = mine.filter(taskDone);
+      const onTimePct = done.length
+        ? Math.round((done.filter((t) => onTime(t)).length / done.length) * 100)
+        : null;
+      const lagScore =
+        od * 3 + carried3 * 2 + openBlockers + (onTimePct == null ? 0 : (100 - onTimePct) / 100);
+      return { u, od, carried3, openBlockers, onTimePct, lagScore };
+    })
+    .filter((r) => r.od > 0 || r.carried3 > 0 || r.openBlockers > 0)
+    .sort((a, b) => b.lagScore - a.lagScore);
 
-  const standupMembers = activeUsers().filter((u) => u.role === "member" || u.role === "manager");
-  const submitted = db.standups.filter((s) => s.date === t).length;
+  // (c) Project completion
+  const projectRows = db.projects
+    .filter((p) => p.status === "active")
+    .map((p) => {
+      const tks = db.tasks.filter((t) => t.project_id === p.id && t.status !== "cancelled");
+      const done = tks.filter(taskDone).length;
+      const completion = tks.length ? done / tks.length : 0;
+      return { p, done, total: tks.length, completion };
+    });
 
   const stat = (n, l, cls) => (
     <div className={"stat" + (cls ? " " + cls : "")}>
@@ -76,73 +58,87 @@ export default function Dashboard() {
     <>
       <PageHead
         title="Command Dashboard"
-        sub="Team health, always current. Rolled up from the same daily work everyone is already doing — no report to assemble."
+        sub="Team health, always current — rolled up from the same daily work everyone is already doing."
       />
+
+      {/* (a) summary boxes */}
       <div className="cards">
-        {stat(dueToday, "Due today")}
-        {stat(overdue, "Overdue", overdue ? "alert" : "")}
-        {stat(blocked, "Blocked", blocked ? "warn" : "")}
-        {stat(carried3, "Pushed 3+×", carried3 ? "alert" : "")}
-        {stat(pending, "Awaiting accept", pending ? "warn" : "")}
+        {stat(allTasks, "All Tasks")}
+        {stat(pending, "Pending Tasks")}
+        {stat(overdue, "Overdue Tasks", overdue ? "alert" : "")}
+        {stat(inProgress, "In Progress Tasks")}
       </div>
 
+      {/* (b) who's lagging behind */}
+      <div className="panel" style={{ padding: "6px 10px" }}>
+        <h2 style={{ padding: "10px 8px 0" }}>Who's lagging behind</h2>
+        {lagging.length === 0 ? (
+          <div className="empty" style={{ margin: 10 }}>Nobody's behind right now — nice.</div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Team member</th>
+                <th>Overdue</th>
+                <th>Carried 3×+</th>
+                <th>Open blockers</th>
+                <th>On-time %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lagging.map(({ u, od, carried3, openBlockers, onTimePct }) => (
+                <tr key={u.id}>
+                  <td><strong>{u.name}</strong></td>
+                  <td className={od ? "warnflag" : ""}>{od}</td>
+                  <td className={carried3 ? "warnflag" : ""}>{carried3}</td>
+                  <td className={openBlockers ? "warnflag" : ""}>{openBlockers}</td>
+                  <td className={onTimePct != null && onTimePct < 60 ? "warnflag" : ""}>
+                    {onTimePct == null ? "—" : onTimePct + "%"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* (c) project completion */}
       <div className="panel">
-        <h2>
-          Key Result confidence <span className="muted-lbl">click a KR to drill in</span>
-        </h2>
-        <div className="kr-heat">
-          {db.keyResults.map((k) => (
-            <div key={k.id} className={"kr-cell " + k.confidence} onClick={() => navigate("okrtree", k.id)}>
-              <div className="krt">{k.title}</div>
-              <div className="krn">
-                {pct(krProgress(k))}% · {CONF_LABEL[k.confidence]} · {k.kr_type}
-              </div>
-            </div>
-          ))}
-          {db.keyResults.length === 0 && <div className="empty">No Key Results yet.</div>}
-        </div>
-      </div>
-
-      <div className="grid2">
-        <div className="panel">
-          <h2>Needs attention</h2>
-          {attn.length ? (
-            attn.map((a, i) => (
-              <div className="attn-item pointer" key={i} onClick={a.onClick}>
-                <span className="attn-ico">{a.ico}</span>
-                {a.node}
-              </div>
-            ))
-          ) : (
-            <div className="empty">All clear — nothing flagged.</div>
-          )}
-        </div>
-
-        <div className="panel">
-          <h2>
-            Today's standups{" "}
-            <span className="muted-lbl">
-              {submitted}/{standupMembers.length} in
-            </span>
-          </h2>
-          {standupMembers.map((u) => {
-            const s = db.standups.find((x) => x.user_id === u.id && x.date === t);
+        <h2>Project completion</h2>
+        {projectRows.length === 0 ? (
+          <div className="empty">No active projects yet.</div>
+        ) : (
+          projectRows.map(({ p, done, total, completion }) => {
+            const barCls = completion >= 0.7 ? "" : completion >= 0.4 ? "amber" : "red";
             return (
-              <div className="mini" key={u.id}>
-                <span>{u.name}</span>
-                <span>
-                  {s ? (
-                    <>
-                      <span className="badge ok">submitted</span> {s.today_task_ids.length} planned
-                    </>
-                  ) : (
-                    <span className="badge no">not yet</span>
-                  )}
-                </span>
+              <div key={p.id} style={{ marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 5,
+                  }}
+                >
+                  <span>
+                    <ProjectDot projectId={p.id} />
+                    {p.name}
+                  </span>
+                  <span>
+                    {pct(completion)}%{" "}
+                    <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+                      ({done}/{total})
+                    </span>
+                  </span>
+                </div>
+                <div className={"bar " + barCls}>
+                  <i style={{ width: pct(completion) + "%" }} />
+                </div>
               </div>
             );
-          })}
-        </div>
+          })
+        )}
       </div>
     </>
   );

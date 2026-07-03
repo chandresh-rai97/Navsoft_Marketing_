@@ -5,7 +5,7 @@ import PageHead from "../components/PageHead.jsx";
 import BlockerCard from "../components/BlockerCard.jsx";
 
 export default function Blockers() {
-  const { db, seesAll } = useApp();
+  const { db, seesAll, isViewer } = useApp();
   const modals = useModals();
 
   const open = db.blockers
@@ -25,9 +25,11 @@ export default function Blockers() {
             : "Blockers you raised, plus the team board where you can offer help."
         }
         actions={
-          <button className="btn" onClick={modals.openBlocker}>
-            + Raise a blocker
-          </button>
+          !isViewer() && (
+            <button className="btn" onClick={modals.openBlocker}>
+              + Raise a blocker
+            </button>
+          )
         }
       />
       <div className="panel">

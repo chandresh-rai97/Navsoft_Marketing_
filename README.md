@@ -44,10 +44,14 @@ loudly, with a counter, so nothing disappears silently.
 
 ### 1. Create the database (Supabase)
 
-In your Supabase project's **SQL editor**, run the two files in order:
+In your Supabase project's **SQL editor**, run the migration files in order, then the seed:
 
 1. `supabase/migrations/0001_init.sql` — tables, RLS policies, helper functions, the new-user → profile trigger, and the `carry_forward_sweep()` routine.
-2. `supabase/seed.sql` — *(optional but recommended for a demo)* six sign-in-able accounts and a full sample dataset.
+2. `supabase/migrations/0002_admin_delete_user.sql` — admin-only "delete user" function + RLS.
+3. `supabase/migrations/0003_deps_delete_viewer.sql` — task dependencies (`depends_on_task_id`), admin-only task delete, and a strictly read-only Viewer role.
+4. `supabase/seed.sql` — *(optional but recommended for a demo)* six sign-in-able accounts and a full sample dataset.
+
+(`supabase/cleanup_users.sql` is a separate optional one-off for pruning demo accounts.)
 
 > The seed creates real Supabase Auth users, so you can log straight in.
 > All demo accounts share the password **`cadence123`**:

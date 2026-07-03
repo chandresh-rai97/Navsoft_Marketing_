@@ -13,7 +13,6 @@ import Blockers from "./pages/Blockers.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import AllTasks from "./pages/AllTasks.jsx";
 import People from "./pages/People.jsx";
-import OKRTree from "./pages/OKRTree.jsx";
 import Projects from "./pages/Projects.jsx";
 import Grid from "./pages/Grid.jsx";
 import StandupBoard from "./pages/StandupBoard.jsx";
@@ -29,7 +28,6 @@ const ROUTES = {
   dashboard: Dashboard,
   alltasks: AllTasks,
   people: People,
-  okrtree: OKRTree,
   projects: Projects,
   grid: Grid,
   standup: StandupBoard,
@@ -38,7 +36,18 @@ const ROUTES = {
 };
 
 const MEMBER_VIEWS = ["myday", "mytasks", "goals", "myweek", "blockers"];
-const VIEWER_VIEWS = ["dashboard", "okrtree", "projects", "grid"];
+// Viewer = executive assistant: read-only access to every oversight view.
+const VIEWER_VIEWS = [
+  "dashboard",
+  "alltasks",
+  "people",
+  "projects",
+  "grid",
+  "standup",
+  "reviews",
+  "goals",
+  "blockers",
+];
 
 function allowedView(role, view) {
   if (role === "member") return MEMBER_VIEWS.includes(view) ? view : "myday";

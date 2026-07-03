@@ -7,7 +7,7 @@ import { CONF_LABEL } from "../lib/logic.js";
 import { isoWeek, pct, daysSince } from "../lib/format.js";
 
 export default function Reviews() {
-  const { db, uname, krProgress, krTasks, taskDone } = useApp();
+  const { db, uname, krProgress, krTasks, taskDone, isViewer } = useApp();
   const modals = useModals();
   const [tab, setTab] = useState("week");
   const week = isoWeek();
@@ -36,16 +36,18 @@ export default function Reviews() {
             </div>
             <div style={{ textAlign: "right", fontSize: 10, color: "var(--muted)", marginTop: 3 }}>{pct(prog)}%</div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn sm ghost" onClick={() => modals.openCheckin(k.id)}>
-              Check in
-            </button>
-            {tab === "quarter" && (
-              <button className="btn sm" onClick={() => modals.openScore(k.id)}>
-                Score
+          {!isViewer() && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="btn sm ghost" onClick={() => modals.openCheckin(k.id)}>
+                Check in
               </button>
-            )}
-          </div>
+              {tab === "quarter" && (
+                <button className="btn sm" onClick={() => modals.openScore(k.id)}>
+                  Score
+                </button>
+              )}
+            </div>
+          )}
         </div>
         {(k.checkin_history || []).length > 0 && (
           <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>

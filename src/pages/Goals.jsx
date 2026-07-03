@@ -8,7 +8,7 @@ import { CONF_LABEL } from "../lib/logic.js";
 import { pct } from "../lib/format.js";
 
 function KRCard({ k }) {
-  const { me, krProgress, krTasks, taskDone, uname, isManager } = useApp();
+  const { me, krProgress, krTasks, taskDone, uname, isManager, isViewer } = useApp();
   const modals = useModals();
   const { toggle, openTask } = useTaskHandlers();
   const prog = krProgress(k);
@@ -16,7 +16,7 @@ function KRCard({ k }) {
   const done = tasks.filter(taskDone).length;
   const barCls = prog >= 0.7 ? "" : prog >= 0.4 ? "amber" : "red";
   const mine = tasks.filter((t) => t.assignee_user_id === me.id);
-  const canCheckin = isManager() || k.owner_user_id === me.id;
+  const canCheckin = !isViewer() && (isManager() || k.owner_user_id === me.id);
 
   return (
     <div className="panel">
