@@ -11,8 +11,8 @@ export default function Projects() {
   return (
     <>
       <PageHead
-        title="Projects"
-        sub="One row per workstream: open, overdue, blocked and done counts, plus which Key Results each project is feeding."
+        title="Portfolio"
+        sub="All projects side by side — open, overdue, blocked and done counts to compare momentum."
       />
       <div className="panel" style={{ padding: "6px 10px" }}>
         <table>

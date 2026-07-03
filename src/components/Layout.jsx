@@ -15,8 +15,8 @@ const COMMAND_NAV = [
   ["dashboard", "Command Dashboard"],
   ["alltasks", "All Tasks"],
   ["people", "People / Workload"],
-  ["projects", "Projects"],
-  ["grid", "Project × KR Grid"],
+  ["grid", "Projects"], // each project with its tasks (route key kept as "grid")
+  ["projects", "Portfolio"], // per-project counts / completion comparison
   ["standup", "Standup Board"],
   ["reviews", "Reviews"],
   ["settings", "Admin Settings"],
@@ -28,8 +28,8 @@ const VIEWER_NAV = [
   ["dashboard", "Dashboard"],
   ["alltasks", "All Tasks"],
   ["people", "People / Workload"],
-  ["projects", "Projects"],
-  ["grid", "Project × KR Grid"],
+  ["grid", "Projects"],
+  ["projects", "Portfolio"],
   ["standup", "Standup Board"],
   ["reviews", "Reviews"],
   ["goals", "Goals"],
