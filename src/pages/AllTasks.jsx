@@ -49,6 +49,7 @@ export default function AllTasks() {
     reassignTasks,
     rescheduleTasks,
     deleteTask,
+    deleteTasks,
   } = useApp();
   const { arg } = useNav();
   const modals = useModals();
@@ -146,6 +147,20 @@ export default function AllTasks() {
     if (!ok) return;
     try {
       await deleteTask(t.id);
+    } catch (e) {
+      dlg.alert("Couldn't delete: " + (e.message || e));
+    }
+  }
+
+  async function handleBulkDelete() {
+    const n = selectedIds.length;
+    const ok = await dlg.confirm(
+      `Delete ${n} selected task${n === 1 ? "" : "s"} permanently? This can't be undone.`
+    );
+    if (!ok) return;
+    try {
+      await deleteTasks(selectedIds);
+      setSel({});
     } catch (e) {
       dlg.alert("Couldn't delete: " + (e.message || e));
     }
@@ -257,6 +272,15 @@ export default function AllTasks() {
           <button className="btn sm ghost" onClick={async () => { await rescheduleTasks(selectedIds, bulkDate); setSel({}); }}>
             Reschedule
           </button>
+          {isAdmin() && (
+            <button
+              className="btn sm"
+              style={{ background: "var(--red)" }}
+              onClick={handleBulkDelete}
+            >
+              Delete selected ({selectedIds.length})
+            </button>
+          )}
           <button className="btn sm ghost" onClick={() => setSel({})}>Clear</button>
         </div>
       )}

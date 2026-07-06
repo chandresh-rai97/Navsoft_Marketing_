@@ -256,7 +256,7 @@ export function AppDataProvider({ children }) {
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
           key_result_id: form.key_result_id || null, // Key Result is optional
-          depends_on_task_id: form.depends_on_task_id || null,
+          depends_on_user_id: form.depends_on_user_id || null,
           planned_for_date: form.planned_for_date,
           client_facing: form.client_facing,
           recurrence: form.recurrence,
@@ -293,7 +293,7 @@ export function AppDataProvider({ children }) {
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
           key_result_id: form.key_result_id || null, // Key Result is optional
-          depends_on_task_id: form.depends_on_task_id || null,
+          depends_on_user_id: form.depends_on_user_id || null,
           status: form.status === "done" ? "not_started" : form.status,
           due_date: form.due_date,
           original_due_date: form.due_date,
@@ -355,6 +355,18 @@ export function AppDataProvider({ children }) {
     async (id) => {
       await deleteRow("tasks", id);
       audit("task", id, "deleted", null, null);
+      await refresh();
+    },
+    [audit, refresh]
+  );
+
+  // Admin-only bulk delete — one confirmation, several deletes (each checked by RLS).
+  const deleteTasks = useCallback(
+    async (ids) => {
+      for (const id of ids) {
+        await deleteRow("tasks", id);
+        audit("task", id, "deleted", null, null);
+      }
       await refresh();
     },
     [audit, refresh]
@@ -796,6 +808,7 @@ export function AppDataProvider({ children }) {
     acceptTask,
     cancelTask,
     deleteTask,
+    deleteTasks,
     reassignTasks,
     rescheduleTasks,
     // blockers

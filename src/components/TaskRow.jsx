@@ -16,12 +16,12 @@ export function StatusTag({ status }) {
 
 // Single task line — the shared row used across My Day, My Tasks, Goals, OKR tree.
 export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
-  const { db, P, KR, uname, pname, isOverdue, canEditTask } = useApp();
+  const { P, KR, uname, pname, isOverdue, canEditTask } = useApp();
   const overdue = isOverdue(t);
   const pinned = opts.pinnable && (overdue || t.status === "carried_forward");
   const kr = KR(t.key_result_id);
   const p = P(t.project_id);
-  const dep = t.depends_on_task_id ? db.tasks.find((x) => x.id === t.depends_on_task_id) : null;
+  const dependsOn = t.depends_on_user_id ? uname(t.depends_on_user_id) : null;
   const checkable = opts.checkable && canEditTask(t) && t.status !== "cancelled";
   const checked = t.status === "done" || t.status === "done_pending_acceptance";
 
@@ -48,9 +48,9 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
           <span className="chip" title="Key Result">
             🎯 {kr ? kr.title : "No KR"}
           </span>
-          {dep && (
+          {dependsOn && (
             <span className="chip" title="Depends on">
-              ⛓ needs: {dep.title}
+              ⛓ Depends on: {dependsOn}
             </span>
           )}
           <StatusTag status={t.status} />

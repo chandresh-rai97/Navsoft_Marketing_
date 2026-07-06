@@ -43,7 +43,7 @@ export default function TaskModal({ id, onClose }) {
     status: existing?.status && existing.status !== "carried_forward" ? existing.status : "not_started",
     project_id: existing?.project_id || activeProjects()[0]?.id || "",
     key_result_id: existing?.key_result_id || "", // Key Result is optional
-    depends_on_task_id: existing?.depends_on_task_id || "",
+    depends_on_user_id: existing?.depends_on_user_id || "",
     due_date: existing?.due_date || todayStr(),
     planned_for_date: existing?.planned_for_date || todayStr(),
     client_facing: !!existing?.client_facing,
@@ -74,9 +74,7 @@ export default function TaskModal({ id, onClose }) {
 
   const canWrite = !readOnly && (!editing || canEditTask(existing));
 
-  const dependsTasks = [...db.tasks]
-    .filter((x) => x.id !== existing?.id)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  const dependsPeople = activeUsers();
 
   async function handleSave() {
     if (!form.title.trim()) return dlg.alert("Give the task a title.");
@@ -193,13 +191,14 @@ export default function TaskModal({ id, onClose }) {
         </div>
       </div>
       <div className="field">
-        <label>Depends on (optional)</label>
-        <select value={form.depends_on_task_id} disabled={readOnly} onChange={(e) => set("depends_on_task_id", e.target.value)}>
-          <option value="">— none —</option>
-          {dependsTasks.map((x) => (
-            <option key={x.id} value={x.id}>{x.title}</option>
+        <label>Depends on — person (optional)</label>
+        <select value={form.depends_on_user_id} disabled={readOnly} onChange={(e) => set("depends_on_user_id", e.target.value)}>
+          <option value="">— nobody —</option>
+          {dependsPeople.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
+        <div className="hint">Who this task is waiting on before it can move.</div>
       </div>
       <div className="row2">
         <div className="field">
