@@ -38,6 +38,7 @@ const EMPTY_DB = {
   blockers: [],
   standups: [],
   weeklyPriorities: [],
+  taskDependencies: [],
 };
 
 export function AppDataProvider({ children }) {
@@ -130,6 +131,16 @@ export function AppDataProvider({ children }) {
     (krId) => db.tasks.filter((t) => t.key_result_id === krId && t.status !== "cancelled"),
     [db.tasks]
   );
+
+  // ---- task dependency people (many users per task) ----
+  const depsByTask = useMemo(() => {
+    const m = {};
+    (db.taskDependencies || []).forEach((d) => {
+      (m[d.task_id] = m[d.task_id] || []).push(d.user_id);
+    });
+    return m;
+  }, [db.taskDependencies]);
+  const taskDepUserIds = useCallback((taskId) => depsByTask[taskId] || [], [depsByTask]);
 
   // ---- role helpers ----
   const isAdmin = () => me?.role === "admin";
@@ -244,6 +255,18 @@ export function AppDataProvider({ children }) {
     [db.tasks, canEditTask, applyStatus, audit, refresh]
   );
 
+  // Replace a task's dependency people with the given set of user ids.
+  const syncTaskDeps = useCallback(async (taskId, userIds) => {
+    await supabase.from("task_dependencies").delete().eq("task_id", taskId);
+    const unique = [...new Set((userIds || []).filter(Boolean))];
+    if (unique.length) {
+      const { error } = await supabase
+        .from("task_dependencies")
+        .insert(unique.map((uid) => ({ task_id: taskId, user_id: uid })));
+      if (error) throw error;
+    }
+  }, []);
+
   // Create or edit a task. `form` carries the modal fields. `opts.reason` is a
   // due-date-change reason gathered by the caller when required.
   const saveTask = useCallback(
@@ -256,7 +279,6 @@ export function AppDataProvider({ children }) {
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
           key_result_id: form.key_result_id || null, // Key Result is optional
-          depends_on_user_id: form.depends_on_user_id || null,
           planned_for_date: form.planned_for_date,
           client_facing: form.client_facing,
           recurrence: form.recurrence,
@@ -279,6 +301,7 @@ export function AppDataProvider({ children }) {
           audit("task", existing.id, "due_date_changed", { old: existing.due_date }, { new: form.due_date });
         }
         await updateRow("tasks", existing.id, patch);
+        await syncTaskDeps(existing.id, form.depends_on_user_ids);
         audit("task", existing.id, "edited", null, null);
         let statusRes = { ok: true };
         if (form.status !== existing.status) {
@@ -293,7 +316,6 @@ export function AppDataProvider({ children }) {
           assignee_user_id: form.assignee_user_id,
           project_id: form.project_id,
           key_result_id: form.key_result_id || null, // Key Result is optional
-          depends_on_user_id: form.depends_on_user_id || null,
           status: form.status === "done" ? "not_started" : form.status,
           due_date: form.due_date,
           original_due_date: form.due_date,
@@ -304,6 +326,7 @@ export function AppDataProvider({ children }) {
           definition_of_done: form.definition_of_done,
         });
         audit("task", created.id, "created", null, null);
+        await syncTaskDeps(created.id, form.depends_on_user_ids);
         if (form.status === "done") {
           await applyStatus(created, "done", { refresh: false });
         }
@@ -311,7 +334,7 @@ export function AppDataProvider({ children }) {
         return created;
       }
     },
-    [me, applyStatus, audit, refresh]
+    [me, applyStatus, audit, refresh, syncTaskDeps]
   );
 
   const acceptTask = useCallback(
@@ -789,6 +812,7 @@ export function AppDataProvider({ children }) {
     activeUsers,
     activeProjects,
     krTasks,
+    taskDepUserIds,
     // role
     isAdmin,
     isManager,

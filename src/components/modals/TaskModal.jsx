@@ -20,6 +20,8 @@ export default function TaskModal({ id, onClose }) {
     activeUsers,
     activeProjects,
     KR,
+    uname,
+    taskDepUserIds,
     isOverdue,
     saveTask,
     cancelTask,
@@ -34,7 +36,8 @@ export default function TaskModal({ id, onClose }) {
   }
   const editing = !!existing;
   const readOnly = isViewer(); // viewers can look but never change anything
-  const assignees = seesAll() ? activeUsers() : [me];
+  // Any non-viewer can assign a task to anyone on the team.
+  const assignees = readOnly ? [me] : activeUsers();
 
   const [form, setForm] = useState(() => ({
     title: existing?.title || "",
@@ -43,13 +46,14 @@ export default function TaskModal({ id, onClose }) {
     status: existing?.status && existing.status !== "carried_forward" ? existing.status : "not_started",
     project_id: existing?.project_id || activeProjects()[0]?.id || "",
     key_result_id: existing?.key_result_id || "", // Key Result is optional
-    depends_on_user_id: existing?.depends_on_user_id || "",
     due_date: existing?.due_date || todayStr(),
     planned_for_date: existing?.planned_for_date || todayStr(),
     client_facing: !!existing?.client_facing,
     recurrence: existing?.recurrence || "none",
     acceptance_required: !!existing?.acceptance_required,
   }));
+  // Multiple dependency people; seeded from the junction table for existing tasks.
+  const [depIds, setDepIds] = useState(() => (existing ? taskDepUserIds(existing.id) : []));
   const [dod, setDod] = useState(() =>
     (existing?.definition_of_done || []).map((d) => ({ text: d.text, done: !!d.done }))
   );
@@ -74,8 +78,6 @@ export default function TaskModal({ id, onClose }) {
 
   const canWrite = !readOnly && (!editing || canEditTask(existing));
 
-  const dependsPeople = activeUsers();
-
   async function handleSave() {
     if (!form.title.trim()) return dlg.alert("Give the task a title.");
     if (!form.project_id) return dlg.alert("Every task must have a project.");
@@ -95,7 +97,11 @@ export default function TaskModal({ id, onClose }) {
         }
       }
       const cleanDod = dod.filter((d) => d.text.trim());
-      const res = await saveTask(existing, { ...form, definition_of_done: cleanDod }, { reason });
+      const res = await saveTask(
+        existing,
+        { ...form, definition_of_done: cleanDod, depends_on_user_ids: depIds },
+        { reason }
+      );
       if (res && res.ok === false) {
         setBusy(false);
         return dlg.alert(res.message);
@@ -155,7 +161,7 @@ export default function TaskModal({ id, onClose }) {
       <div className="row2">
         <div className="field">
           <label>Assignee</label>
-          <select value={form.assignee_user_id} disabled={readOnly || !seesAll()} onChange={(e) => set("assignee_user_id", e.target.value)}>
+          <select value={form.assignee_user_id} disabled={readOnly} onChange={(e) => set("assignee_user_id", e.target.value)}>
             {assignees.map((u) => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
@@ -191,14 +197,46 @@ export default function TaskModal({ id, onClose }) {
         </div>
       </div>
       <div className="field">
-        <label>Depends on — person (optional)</label>
-        <select value={form.depends_on_user_id} disabled={readOnly} onChange={(e) => set("depends_on_user_id", e.target.value)}>
-          <option value="">— nobody —</option>
-          {dependsPeople.map((u) => (
-            <option key={u.id} value={u.id}>{u.name}</option>
-          ))}
-        </select>
-        <div className="hint">Who this task is waiting on before it can move.</div>
+        <label>Depends on — people (optional)</label>
+        {!readOnly && (
+          <select
+            value=""
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v && !depIds.includes(v)) setDepIds([...depIds, v]);
+            }}
+          >
+            <option value="">+ add a person…</option>
+            {activeUsers()
+              .filter((u) => !depIds.includes(u.id))
+              .map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+          </select>
+        )}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+          {depIds.length === 0 ? (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>
+              Nobody — this task isn't waiting on anyone.
+            </span>
+          ) : (
+            depIds.map((uid) => (
+              <span key={uid} className="chip">
+                {uname(uid)}
+                {!readOnly && (
+                  <span
+                    className="danger-link"
+                    style={{ marginLeft: 4, textDecoration: "none" }}
+                    onClick={() => setDepIds(depIds.filter((x) => x !== uid))}
+                  >
+                    ×
+                  </span>
+                )}
+              </span>
+            ))
+          )}
+        </div>
+        <div className="hint">Everyone this task is waiting on before it can move.</div>
       </div>
       <div className="row2">
         <div className="field">

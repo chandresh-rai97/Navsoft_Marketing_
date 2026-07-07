@@ -12,6 +12,7 @@ const TABLES = {
   blockers: "blockers",
   standups: "standup_entries",
   weeklyPriorities: "weekly_priorities",
+  taskDependencies: "task_dependencies",
 };
 
 // Load the whole team's working set in parallel. Fine for a single-team MVP.
