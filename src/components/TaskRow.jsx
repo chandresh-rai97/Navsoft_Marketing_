@@ -15,29 +15,47 @@ export function StatusTag({ status }) {
 }
 
 // Single task line — the shared row used across My Day, My Tasks, Goals, OKR tree.
+const WORKABLE = ["not_started", "in_progress", "blocked", "changes_requested", "carried_forward"];
+
 export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
-  const { P, KR, uname, pname, isOverdue, canEditTask, taskDepUserIds } = useApp();
+  const { me, P, KR, uname, pname, isOverdue, canEditTask, taskDepUserIds, usesReview, canReview } = useApp();
   const overdue = isOverdue(t);
   const pinned = opts.pinnable && (overdue || t.status === "carried_forward");
   const kr = KR(t.key_result_id);
   const p = P(t.project_id);
   const dependsOn = taskDepUserIds(t.id).map(uname).filter(Boolean).join(", ");
-  const checkable = opts.checkable && canEditTask(t) && t.status !== "cancelled";
-  const checked = t.status === "done" || t.status === "done_pending_acceptance";
+  const checked = t.status === "done";
+
+  // Left-hand control: legacy tasks keep the tick; review-flow tasks show a
+  // "Submit" (for the assignee) or "Review" (for the reviewer) button instead.
+  let control = <div style={{ width: 19 }} />;
+  if (opts.checkable && t.status !== "cancelled" && t.status !== "done") {
+    if (!usesReview(t) && canEditTask(t)) {
+      const legacyChecked = t.status === "done_pending_acceptance";
+      control = (
+        <div
+          className={"check" + (legacyChecked ? " on" : "")}
+          onClick={(e) => { e.stopPropagation(); onToggle && onToggle(t.id); }}
+        />
+      );
+    } else if (usesReview(t) && canReview(t) && t.status === "done_pending_acceptance") {
+      control = (
+        <button className="btn sm accent" onClick={(e) => { e.stopPropagation(); onOpen && onOpen(t.id); }}>
+          Review
+        </button>
+      );
+    } else if (usesReview(t) && t.assignee_user_id === me?.id && WORKABLE.includes(t.status)) {
+      control = (
+        <button className="btn sm" onClick={(e) => { e.stopPropagation(); onOpen && onOpen(t.id); }}>
+          Submit
+        </button>
+      );
+    }
+  }
 
   return (
-    <div className={"task-row" + (pinned ? " pinned" : "") + (t.status === "done" ? " done" : "")}>
-      {checkable ? (
-        <div
-          className={"check" + (checked ? " on" : "")}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle && onToggle(t.id);
-          }}
-        />
-      ) : (
-        <div style={{ width: 19 }} />
-      )}
+    <div className={"task-row" + (pinned ? " pinned" : "") + (checked ? " done" : "")}>
+      {control}
       <div className="task-body" onClick={() => onOpen && onOpen(t.id)}>
         <div className="task-title">{t.title}</div>
         <div className="task-meta">

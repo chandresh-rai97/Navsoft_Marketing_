@@ -13,9 +13,9 @@ import Blockers from "./pages/Blockers.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import AllTasks from "./pages/AllTasks.jsx";
 import People from "./pages/People.jsx";
-import Projects from "./pages/Projects.jsx";
 import Grid from "./pages/Grid.jsx";
-import StandupBoard from "./pages/StandupBoard.jsx";
+import Acceptance from "./pages/Acceptance.jsx";
+import Done from "./pages/Done.jsx";
 import Reviews from "./pages/Reviews.jsx";
 import Settings from "./pages/Settings.jsx";
 
@@ -27,10 +27,10 @@ const ROUTES = {
   blockers: Blockers,
   dashboard: Dashboard,
   alltasks: AllTasks,
+  acceptance: Acceptance,
+  done: Done,
   people: People,
-  projects: Projects,
   grid: Grid,
-  standup: StandupBoard,
   reviews: Reviews,
   settings: Settings,
 };
@@ -40,10 +40,10 @@ const MEMBER_VIEWS = ["myday", "mytasks", "goals", "myweek", "blockers"];
 const VIEWER_VIEWS = [
   "dashboard",
   "alltasks",
+  "acceptance",
+  "done",
   "people",
-  "projects",
   "grid",
-  "standup",
   "reviews",
   "goals",
   "blockers",

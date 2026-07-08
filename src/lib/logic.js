@@ -7,6 +7,7 @@ export const STATUSES = [
   "not_started",
   "in_progress",
   "blocked",
+  "changes_requested",
   "done_pending_acceptance",
   "done",
   "carried_forward",
@@ -17,7 +18,8 @@ export const STATUS_LABEL = {
   not_started: "Not started",
   in_progress: "In progress",
   blocked: "Blocked",
-  done_pending_acceptance: "Pending acceptance",
+  changes_requested: "Changes requested",
+  done_pending_acceptance: "Awaiting acceptance",
   done: "Done",
   carried_forward: "Carried forward",
   cancelled: "Cancelled",
@@ -28,8 +30,18 @@ export const OPEN_STATUSES = [
   "not_started",
   "in_progress",
   "blocked",
+  "changes_requested",
   "carried_forward",
   "done_pending_acceptance",
+];
+
+// Statuses a member can still actively work on (before submitting).
+export const WORKABLE_STATUSES = [
+  "not_started",
+  "in_progress",
+  "blocked",
+  "changes_requested",
+  "carried_forward",
 ];
 
 export const CONF = ["on_track", "at_risk", "off_track"];

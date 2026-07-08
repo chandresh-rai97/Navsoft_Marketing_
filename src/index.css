@@ -101,6 +101,7 @@ tr.clk:hover td { background: var(--paper-2); }
 .st-blocked { background: var(--red-soft); color: var(--red); }
 .st-done_pending_acceptance { background: var(--amber-soft); color: var(--amber); }
 .st-done { background: var(--green-soft); color: var(--green); }
+.st-changes_requested { background: var(--amber-soft); color: var(--amber); }
 .st-carried_forward { background: #f0e3d0; color: #9a6413; }
 .st-cancelled { background: #eceae4; color: #9a9ea6; text-decoration: line-through; }
 .prio { font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }

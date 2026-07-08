@@ -14,10 +14,10 @@ const MEMBER_NAV = [
 const COMMAND_NAV = [
   ["dashboard", "Command Dashboard"],
   ["alltasks", "All Tasks"],
+  ["acceptance", "Acceptance"],
+  ["done", "Done"],
   ["people", "People / Workload"],
-  ["grid", "Projects"], // each project with its tasks (route key kept as "grid")
-  ["projects", "Portfolio"], // per-project counts / completion comparison
-  ["standup", "Standup Board"],
+  ["grid", "Projects"], // summary boxes → drill-in (route key kept as "grid")
   ["reviews", "Reviews"],
   ["settings", "Admin Settings"],
 ];
@@ -27,10 +27,10 @@ const COMMAND_NAV = [
 const VIEWER_NAV = [
   ["dashboard", "Dashboard"],
   ["alltasks", "All Tasks"],
+  ["acceptance", "Acceptance"],
+  ["done", "Done"],
   ["people", "People / Workload"],
   ["grid", "Projects"],
-  ["projects", "Portfolio"],
-  ["standup", "Standup Board"],
   ["reviews", "Reviews"],
   ["goals", "Goals"],
   ["blockers", "Blockers"],
@@ -50,11 +50,14 @@ function navConfig(role) {
 }
 
 export default function Layout({ view, navigate, children }) {
-  const { me, db, signOut } = useApp();
+  const { me, db, signOut, canReview, isAdmin } = useApp();
   if (!me) return null;
   const cfg = navConfig(me.role);
   const today = todayStr();
 
+  const pendingReview = db.tasks.filter(
+    (t) => t.status === "done_pending_acceptance" && (isAdmin() || canReview(t))
+  ).length;
   const openBlockers = db.blockers.filter((b) => b.status === "open").length;
   const needsAttention =
     db.tasks.filter(
@@ -73,6 +76,7 @@ export default function Layout({ view, navigate, children }) {
 
   const pillFor = (key) => {
     if (key === "blockers" && openBlockers) return { text: openBlockers, warn: false };
+    if (key === "acceptance" && pendingReview) return { text: pendingReview, warn: true };
     if (key === "dashboard" && needsAttention) return { text: needsAttention, warn: true };
     if (key === "myday" && myDayCount) return { text: myDayCount, warn: false };
     return null;

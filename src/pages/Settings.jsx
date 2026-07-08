@@ -179,6 +179,48 @@ export default function Settings() {
       </div>
 
       <div className="panel">
+        <h2>Managers &amp; their projects</h2>
+        <div className="sub" style={{ marginBottom: 10 }}>
+          Make someone a manager with <strong>Edit</strong> above (set Role = manager), then allot them
+          projects by opening each project and setting its <strong>Lead</strong>.
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Manager</th>
+              <th>Projects they lead</th>
+            </tr>
+          </thead>
+          <tbody>
+            {db.users
+              .filter((u) => (u.role === "manager" || u.role === "admin") && u.active)
+              .map((mgr) => {
+                const owned = db.projects.filter((p) => p.lead_user_id === mgr.id);
+                return (
+                  <tr key={mgr.id}>
+                    <td>
+                      <strong>{mgr.name}</strong>
+                      <span style={{ color: "var(--muted)", textTransform: "capitalize" }}> · {mgr.role}</span>
+                    </td>
+                    <td>
+                      {owned.length ? (
+                        owned.map((p) => (
+                          <span className="chip" key={p.id} style={{ marginRight: 4 }}>
+                            {p.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ color: "var(--muted)" }}>— none allotted —</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="panel">
         <h2>Data & seed</h2>
         <div className="sub">
           Demo data is loaded by running <code>supabase/seed.sql</code> in the Supabase SQL editor. To wipe and

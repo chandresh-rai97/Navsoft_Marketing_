@@ -39,6 +39,8 @@ const EMPTY_DB = {
   standups: [],
   weeklyPriorities: [],
   taskDependencies: [],
+  projectMembers: [],
+  taskCollaborators: [],
 };
 
 export function AppDataProvider({ children }) {
@@ -154,6 +156,57 @@ export function AppDataProvider({ children }) {
       return t.assignee_user_id === me.id && me.role !== "viewer";
     },
     [me]
+  );
+
+  // ---- review workflow + membership helpers ----
+  const usesReview = (t) => !!t?.uses_review; // false for legacy tasks
+
+  // Who must review a submitted task: the project's manager — unless the person
+  // who did the work is themselves a manager/admin, in which case it goes to the
+  // admin (nobody reviews their own work).
+  const reviewerId = useCallback(
+    (t) => {
+      const assignee = db.users.find((u) => u.id === t.assignee_user_id);
+      const admin = db.users.find((u) => u.role === "admin" && u.active);
+      if (assignee && (assignee.role === "manager" || assignee.role === "admin"))
+        return admin?.id || null;
+      const lead = db.projects.find((p) => p.id === t.project_id)?.lead_user_id;
+      if (lead && lead !== t.assignee_user_id) return lead;
+      return admin?.id || null;
+    },
+    [db.users, db.projects]
+  );
+  const canReview = useCallback(
+    (t) => !!me && (me.role === "admin" || reviewerId(t) === me.id),
+    [me, reviewerId]
+  );
+
+  const membersByProject = useMemo(() => {
+    const m = {};
+    (db.projectMembers || []).forEach((r) => {
+      (m[r.project_id] = m[r.project_id] || []).push(r.user_id);
+    });
+    return m;
+  }, [db.projectMembers]);
+  const projectMemberIds = useCallback((pid) => membersByProject[pid] || [], [membersByProject]);
+
+  const collabByTask = useMemo(() => {
+    const m = {};
+    (db.taskCollaborators || []).forEach((r) => {
+      (m[r.task_id] = m[r.task_id] || []).push(r.user_id);
+    });
+    return m;
+  }, [db.taskCollaborators]);
+  const taskCollaboratorIds = useCallback((tid) => collabByTask[tid] || [], [collabByTask]);
+
+  // Is the current user responsible for this project (its manager, or an admin)?
+  const isProjectManager = useCallback(
+    (pid) => {
+      if (!me) return false;
+      if (me.role === "admin") return true;
+      return db.projects.find((p) => p.id === pid)?.lead_user_id === me.id;
+    },
+    [me, db.projects]
   );
 
   const audit = useCallback(
@@ -371,6 +424,78 @@ export function AppDataProvider({ children }) {
       await refresh();
     },
     [audit, refresh]
+  );
+
+  // ---- submit / approve workflow ----
+  // Member submits a task for review (with an optional proof link). Routes it to
+  // the reviewer (project manager, or the admin if the submitter is a manager).
+  const submitForReview = useCallback(
+    async (id, proofLink = "") => {
+      await updateRow("tasks", id, {
+        status: "done_pending_acceptance",
+        proof_link: proofLink || null,
+        resubmit_by: null,
+      });
+      audit("task", id, "submitted", null, { proof_link: proofLink || null });
+      await refresh();
+      return { ok: true };
+    },
+    [audit, refresh]
+  );
+
+  // Reviewer accepts → marks the task Done (spawns recurrence if set). The DB
+  // trigger auto-revokes any temporary collaborators once it's Done.
+  const acceptReview = useCallback(
+    async (id) => {
+      const t = db.tasks.find((x) => x.id === id);
+      if (!canReview(t)) return { ok: false, message: "Only the assigned reviewer can accept this." };
+      await updateRow("tasks", id, {
+        status: "done",
+        completed_at: nowIso(),
+        completed_by_user_id: me.id,
+        accepted_by_user_id: me.id,
+      });
+      audit("task", id, "accepted", null, null);
+      if (t.recurrence && t.recurrence !== "none") {
+        const step = t.recurrence === "daily" ? 1 : 7;
+        const nd = shiftStr(t.due_date, step);
+        await insertRow("tasks", {
+          title: t.title,
+          description: t.description,
+          assignee_user_id: t.assignee_user_id,
+          project_id: t.project_id,
+          key_result_id: t.key_result_id,
+          status: "not_started",
+          due_date: nd,
+          original_due_date: nd,
+          planned_for_date: nd,
+          acceptance_required: t.acceptance_required,
+          client_facing: t.client_facing,
+          recurrence: t.recurrence,
+        });
+      }
+      await refresh();
+      return { ok: true };
+    },
+    [db.tasks, canReview, me, audit, refresh]
+  );
+
+  // Reviewer requests changes → sends it back with a "Resubmit by" date + note.
+  const requestChanges = useCallback(
+    async (id, resubmitBy, note = "") => {
+      const t = db.tasks.find((x) => x.id === id);
+      if (!canReview(t)) return { ok: false, message: "Only the assigned reviewer can request changes." };
+      await updateRow("tasks", id, {
+        status: "changes_requested",
+        resubmit_by: resubmitBy || null,
+        review_note: note || null,
+        reopened_count: (t.reopened_count || 0) + 1,
+      });
+      audit("task", id, "changes_requested", null, { resubmit_by: resubmitBy, note });
+      await refresh();
+      return { ok: true };
+    },
+    [db.tasks, canReview, me, audit, refresh]
   );
 
   // Admin-only hard delete (RLS tasks_delete is admin-only too).
@@ -611,6 +736,46 @@ export function AppDataProvider({ children }) {
     [audit, refresh]
   );
 
+  // (1) A project's manager (or admin) adds/removes users on the project.
+  const addProjectMember = useCallback(
+    async (projectId, userId) => {
+      await upsertRow("project_members", { project_id: projectId, user_id: userId }, "project_id,user_id");
+      audit("project", projectId, "member_added", null, { user_id: userId });
+      await refresh();
+    },
+    [audit, refresh]
+  );
+  const removeProjectMember = useCallback(
+    async (projectId, userId) => {
+      await supabase.from("project_members").delete().eq("project_id", projectId).eq("user_id", userId);
+      audit("project", projectId, "member_removed", null, { user_id: userId });
+      await refresh();
+    },
+    [audit, refresh]
+  );
+
+  // (8) A project's manager adds another manager onto one task, temporarily.
+  const addTaskCollaborator = useCallback(
+    async (taskId, userId) => {
+      await upsertRow(
+        "task_collaborators",
+        { task_id: taskId, user_id: userId, added_by: me.id },
+        "task_id,user_id"
+      );
+      audit("task", taskId, "collaborator_added", null, { user_id: userId });
+      await refresh();
+    },
+    [me, audit, refresh]
+  );
+  const removeTaskCollaborator = useCallback(
+    async (taskId, userId) => {
+      await supabase.from("task_collaborators").delete().eq("task_id", taskId).eq("user_id", userId);
+      audit("task", taskId, "collaborator_removed", null, { user_id: userId });
+      await refresh();
+    },
+    [audit, refresh]
+  );
+
   const updateUser = useCallback(
     async (id, data) => {
       await updateRow("profiles", id, data);
@@ -813,6 +978,13 @@ export function AppDataProvider({ children }) {
     activeProjects,
     krTasks,
     taskDepUserIds,
+    // review workflow + membership
+    usesReview,
+    reviewerId,
+    canReview,
+    isProjectManager,
+    projectMemberIds,
+    taskCollaboratorIds,
     // role
     isAdmin,
     isManager,
@@ -835,6 +1007,15 @@ export function AppDataProvider({ children }) {
     deleteTasks,
     reassignTasks,
     rescheduleTasks,
+    // review workflow mutations
+    submitForReview,
+    acceptReview,
+    requestChanges,
+    // project members / task collaborators
+    addProjectMember,
+    removeProjectMember,
+    addTaskCollaborator,
+    removeTaskCollaborator,
     // blockers
     createBlocker,
     assignHelper,

@@ -46,10 +46,15 @@ loudly, with a counter, so nothing disappears silently.
 
 In your Supabase project's **SQL editor**, run the migration files in order, then the seed:
 
-1. `supabase/migrations/0001_init.sql` — tables, RLS policies, helper functions, the new-user → profile trigger, and the `carry_forward_sweep()` routine.
-2. `supabase/migrations/0002_admin_delete_user.sql` — admin-only "delete user" function + RLS.
-3. `supabase/migrations/0003_deps_delete_viewer.sql` — task dependencies (`depends_on_task_id`), admin-only task delete, and a strictly read-only Viewer role.
-4. `supabase/seed.sql` — *(optional but recommended for a demo)* six sign-in-able accounts and a full sample dataset.
+Run **every file in `supabase/migrations/` in numeric order** (0001 → 0006), then optionally the seed:
+
+1. `0001_init.sql` — tables, RLS policies, helper functions, the new-user → profile trigger, and `carry_forward_sweep()`.
+2. `0002_admin_delete_user.sql` — admin-only "delete user" function + RLS.
+3. `0003_deps_delete_viewer.sql` — task dependencies, admin-only task delete, strictly read-only Viewer.
+4. `0004_depends_on_user.sql` — "Depends on" points to a person.
+5. `0005_assign_and_multi_deps.sql` — open assignment + many dependency people per task.
+6. `0006_review_workflow.sql` — submit/approve workflow, project members & task collaborators, the "SEO/Website" project.
+7. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
 
 (`supabase/cleanup_users.sql` is a separate optional one-off for pruning demo accounts.)
 
