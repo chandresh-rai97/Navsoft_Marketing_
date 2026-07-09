@@ -10,6 +10,7 @@ import MyTasks from "./pages/MyTasks.jsx";
 import Goals from "./pages/Goals.jsx";
 import MyWeek from "./pages/MyWeek.jsx";
 import Blockers from "./pages/Blockers.jsx";
+import Notifications from "./pages/Notifications.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import AllTasks from "./pages/AllTasks.jsx";
 import People from "./pages/People.jsx";
@@ -25,6 +26,7 @@ const ROUTES = {
   goals: Goals,
   myweek: MyWeek,
   blockers: Blockers,
+  notifications: Notifications,
   dashboard: Dashboard,
   alltasks: AllTasks,
   acceptance: Acceptance,
@@ -35,7 +37,18 @@ const ROUTES = {
   settings: Settings,
 };
 
-const MEMBER_VIEWS = ["myday", "mytasks", "goals", "myweek", "blockers"];
+const MEMBER_VIEWS = ["myday", "mytasks", "notifications", "goals", "myweek", "blockers"];
+// Managers are scoped: their work tabs + their project oversight, but no
+// People/Workload and no admin Settings.
+const MANAGER_VIEWS = [
+  ...MEMBER_VIEWS,
+  "dashboard",
+  "alltasks",
+  "acceptance",
+  "done",
+  "grid",
+  "reviews",
+];
 // Viewer = executive assistant: read-only access to every oversight view.
 const VIEWER_VIEWS = [
   "dashboard",
@@ -51,8 +64,9 @@ const VIEWER_VIEWS = [
 
 function allowedView(role, view) {
   if (role === "member") return MEMBER_VIEWS.includes(view) ? view : "myday";
+  if (role === "manager") return MANAGER_VIEWS.includes(view) ? view : "dashboard";
   if (role === "viewer") return VIEWER_VIEWS.includes(view) ? view : "dashboard";
-  return ROUTES[view] ? view : "dashboard"; // admin / manager see everything
+  return ROUTES[view] ? view : "dashboard"; // admin sees everything
 }
 
 export default function App() {

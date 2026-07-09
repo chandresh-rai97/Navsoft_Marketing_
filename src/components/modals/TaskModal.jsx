@@ -21,6 +21,7 @@ export default function TaskModal({ id, onClose }) {
     canEditTask,
     activeUsers,
     activeProjects,
+    scopedProjects,
     KR,
     uname,
     taskDepUserIds,
@@ -46,13 +47,25 @@ export default function TaskModal({ id, onClose }) {
   const editing = !!existing;
   const readOnly = isViewer();
   const assignees = readOnly ? [me] : activeUsers();
+  // Managers can only create tasks in projects they manage.
+  const projectChoices = (() => {
+    const base = me.role === "manager" ? scopedProjects() : activeProjects();
+    if (existing?.project_id && !base.find((p) => p.id === existing.project_id)) {
+      const cur = db.projects.find((p) => p.id === existing.project_id);
+      if (cur) return [cur, ...base];
+    }
+    return base;
+  })();
 
   const [form, setForm] = useState(() => ({
     title: existing?.title || "",
     description: existing?.description || "",
     assignee_user_id: existing?.assignee_user_id || me.id,
     status: existing?.status && existing.status !== "carried_forward" ? existing.status : "not_started",
-    project_id: existing?.project_id || activeProjects()[0]?.id || "",
+    project_id:
+      existing?.project_id ||
+      (me.role === "manager" ? scopedProjects()[0]?.id : activeProjects()[0]?.id) ||
+      "",
     key_result_id: existing?.key_result_id || "",
     due_date: existing?.due_date || todayStr(),
     planned_for_date: existing?.planned_for_date || todayStr(),
@@ -204,7 +217,7 @@ export default function TaskModal({ id, onClose }) {
           <label>Project *</label>
           <select value={form.project_id} disabled={readOnly} onChange={(e) => set("project_id", e.target.value)}>
             <option value="">— pick —</option>
-            {activeProjects().map((p) => (
+            {projectChoices.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>

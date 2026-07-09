@@ -14,7 +14,7 @@ export default function Grid() {
     uname,
     taskDone,
     isOverdue,
-    activeProjects,
+    scopedProjects,
     activeUsers,
     isViewer,
     isProjectManager,
@@ -26,7 +26,7 @@ export default function Grid() {
   const { toggle, openTask } = useTaskHandlers();
   const [selected, setSelected] = useState(null);
 
-  const projectsList = activeProjects();
+  const projectsList = scopedProjects();
 
   // If the selected project disappears (e.g. archived), fall back to the grid.
   useEffect(() => {

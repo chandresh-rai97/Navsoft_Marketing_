@@ -46,6 +46,7 @@ export default function AllTasks() {
     isOverdue,
     isAdmin,
     isManager,
+    scopedProjects,
     reassignTasks,
     rescheduleTasks,
     deleteTask,
@@ -195,7 +196,7 @@ export default function AllTasks() {
         </select>
         <select value={f.project} onChange={(e) => set("project", e.target.value)}>
           <option value="">All projects</option>
-          {db.projects.map((p) => (
+          {scopedProjects().map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>

@@ -41,6 +41,7 @@ const EMPTY_DB = {
   taskDependencies: [],
   projectMembers: [],
   taskCollaborators: [],
+  notifications: [],
 };
 
 export function AppDataProvider({ children }) {
@@ -88,6 +89,23 @@ export function AppDataProvider({ children }) {
       cancelled = true;
     };
   }, [session]);
+
+  // ---- realtime: refresh when a notification arrives for me (best-effort) ----
+  const myId = session?.user?.id;
+  useEffect(() => {
+    if (!myId) return;
+    const ch = supabase
+      .channel("notif-" + myId)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${myId}` },
+        () => refresh()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [myId, refresh]);
 
   const me = useMemo(
     () => (session ? db.users.find((u) => u.id === session.user.id) || null : null),
@@ -208,6 +226,15 @@ export function AppDataProvider({ children }) {
     },
     [me, db.projects]
   );
+
+  // Projects the current user should see as "theirs": a manager sees only the
+  // project(s) they lead; admin/viewer see all. (Tasks are already scoped by RLS.)
+  const scopedProjects = useCallback(() => {
+    if (!me) return [];
+    const active = db.projects.filter((p) => p.status === "active");
+    if (me.role === "manager") return active.filter((p) => p.lead_user_id === me.id);
+    return active;
+  }, [me, db.projects]);
 
   const audit = useCallback(
     (entity, id, action, oldV, newV) =>
@@ -480,18 +507,39 @@ export function AppDataProvider({ children }) {
     [db.tasks, canReview, me, audit, refresh]
   );
 
-  // Reviewer requests changes → sends it back with a "Resubmit by" date + note.
+  // Reviewer requests changes → sends it back with a REQUIRED comment + a
+  // "Resubmit by" date. Every round is appended to review_history (never
+  // overwritten) and the member is notified in-app.
   const requestChanges = useCallback(
     async (id, resubmitBy, note = "") => {
       const t = db.tasks.find((x) => x.id === id);
       if (!canReview(t)) return { ok: false, message: "Only the assigned reviewer can request changes." };
+      if (!note || !note.trim()) return { ok: false, message: "Please write what needs to change — a comment is required." };
+      const entry = { at: nowIso(), by: me.id, resubmit_by: resubmitBy || null, note: note.trim() };
+      const history = [...(t.review_history || []), entry];
       await updateRow("tasks", id, {
         status: "changes_requested",
         resubmit_by: resubmitBy || null,
-        review_note: note || null,
+        review_note: note.trim(),
+        review_history: history,
         reopened_count: (t.reopened_count || 0) + 1,
       });
-      audit("task", id, "changes_requested", null, { resubmit_by: resubmitBy, note });
+      // Notify the member whose task was bounced back.
+      try {
+        await insertRow("notifications", {
+          user_id: t.assignee_user_id,
+          type: "changes_requested",
+          task_id: id,
+          message:
+            `Changes requested on “${t.title}”` +
+            (resubmitBy ? ` — resubmit by ${resubmitBy}` : "") +
+            `: ${note.trim()}`,
+          read: false,
+        });
+      } catch (e) {
+        console.warn("notification failed:", e?.message);
+      }
+      audit("task", id, "changes_requested", null, { resubmit_by: resubmitBy, note: note.trim() });
       await refresh();
       return { ok: true };
     },
@@ -810,6 +858,31 @@ export function AppDataProvider({ children }) {
   );
 
   // =========================================================================
+  // NOTIFICATIONS (in-app)
+  // =========================================================================
+  const myNotifications = useMemo(
+    () =>
+      (db.notifications || [])
+        .filter((n) => n.user_id === me?.id)
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")),
+    [db.notifications, me]
+  );
+  const unreadCount = useMemo(() => myNotifications.filter((n) => !n.read).length, [myNotifications]);
+
+  const markNotificationRead = useCallback(
+    async (id) => {
+      await updateRow("notifications", id, { read: true });
+      await refresh();
+    },
+    [refresh]
+  );
+  const markAllNotificationsRead = useCallback(async () => {
+    const unread = myNotifications.filter((n) => !n.read);
+    for (const n of unread) await updateRow("notifications", n.id, { read: true });
+    await refresh();
+  }, [myNotifications, refresh]);
+
+  // =========================================================================
   // CSV IMPORT (My Tasks → Import from spreadsheet)
   // =========================================================================
   const STATUS_FROM_LABEL = {
@@ -983,8 +1056,14 @@ export function AppDataProvider({ children }) {
     reviewerId,
     canReview,
     isProjectManager,
+    scopedProjects,
     projectMemberIds,
     taskCollaboratorIds,
+    // notifications
+    myNotifications,
+    unreadCount,
+    markNotificationRead,
+    markAllNotificationsRead,
     // role
     isAdmin,
     isManager,

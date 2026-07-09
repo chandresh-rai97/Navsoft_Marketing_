@@ -6,6 +6,7 @@ import { daysSince, todayStr } from "../lib/format.js";
 const MEMBER_NAV = [
   ["myday", "My Day"],
   ["mytasks", "My Tasks"],
+  ["notifications", "Notifications"],
   ["goals", "Goals"],
   ["myweek", "My Week"],
   ["blockers", "Blockers"],
@@ -37,10 +38,14 @@ const VIEWER_NAV = [
 ];
 
 function navConfig(role) {
-  if (role === "admin" || role === "manager") {
+  if (role === "admin") {
+    return { "Your work": MEMBER_NAV, Command: COMMAND_NAV };
+  }
+  if (role === "manager") {
+    // Managers are scoped to their own projects — no People/Workload or Settings.
     return {
       "Your work": MEMBER_NAV,
-      Command: COMMAND_NAV.filter((a) => role === "admin" || a[0] !== "settings"),
+      Command: COMMAND_NAV.filter((a) => a[0] !== "settings" && a[0] !== "people"),
     };
   }
   if (role === "viewer") {
@@ -50,7 +55,7 @@ function navConfig(role) {
 }
 
 export default function Layout({ view, navigate, children }) {
-  const { me, db, signOut, canReview, isAdmin } = useApp();
+  const { me, db, signOut, canReview, isAdmin, unreadCount } = useApp();
   if (!me) return null;
   const cfg = navConfig(me.role);
   const today = todayStr();
@@ -75,6 +80,7 @@ export default function Layout({ view, navigate, children }) {
   ).length;
 
   const pillFor = (key) => {
+    if (key === "notifications" && unreadCount) return { text: unreadCount, warn: true };
     if (key === "blockers" && openBlockers) return { text: openBlockers, warn: false };
     if (key === "acceptance" && pendingReview) return { text: pendingReview, warn: true };
     if (key === "dashboard" && needsAttention) return { text: needsAttention, warn: true };

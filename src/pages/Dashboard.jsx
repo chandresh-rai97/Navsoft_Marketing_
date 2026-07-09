@@ -6,16 +6,19 @@ import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
 import { pct } from "../lib/format.js";
 
 export default function Dashboard() {
-  const { db, activeUsers, taskDone, onTime, isOverdue } = useApp();
+  const { db, activeUsers, taskDone, onTime, isOverdue, scopedProjects } = useApp();
 
+  // db.tasks is already scoped by RLS (a manager only receives their own
+  // project's tasks), so every count here reflects just what they manage.
   const notCancelled = db.tasks.filter((t) => t.status !== "cancelled");
   const allTasks = notCancelled.length;
   const pending = db.tasks.filter((t) => t.status === "not_started").length;
   const overdue = db.tasks.filter((t) => isOverdue(t)).length;
   const inProgress = db.tasks.filter((t) => t.status === "in_progress").length;
 
-  // (b) Who's lagging behind
-  const members = activeUsers().filter((u) => u.role !== "viewer");
+  // (b) Who's lagging behind — only people who appear on visible tasks.
+  const assigneeIds = new Set(db.tasks.map((t) => t.assignee_user_id));
+  const members = activeUsers().filter((u) => u.role !== "viewer" && assigneeIds.has(u.id));
   const lagging = members
     .map((u) => {
       const mine = db.tasks.filter((t) => t.assignee_user_id === u.id);
@@ -37,9 +40,8 @@ export default function Dashboard() {
     .filter((r) => r.od > 0 || r.carried3 > 0 || r.openBlockers > 0)
     .sort((a, b) => b.lagScore - a.lagScore);
 
-  // (c) Project completion
-  const projectRows = db.projects
-    .filter((p) => p.status === "active")
+  // (c) Project completion — only the projects this user is responsible for.
+  const projectRows = scopedProjects()
     .map((p) => {
       const tks = db.tasks.filter((t) => t.project_id === p.id && t.status !== "cancelled");
       const done = tks.filter(taskDone).length;

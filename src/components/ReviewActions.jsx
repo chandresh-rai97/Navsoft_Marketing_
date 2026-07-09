@@ -25,6 +25,7 @@ export default function ReviewActions({ task, onDone }) {
   }
 
   async function sendBack() {
+    if (!note.trim()) return dlg.alert("Write what needs to change — a comment is required.");
     if (!resubmitBy) return dlg.alert("Pick a 'Resubmit by' date.");
     setBusy(true);
     const r = await requestChanges(task.id, resubmitBy, note.trim());
@@ -32,6 +33,8 @@ export default function ReviewActions({ task, onDone }) {
     if (r && r.ok === false) return dlg.alert(r.message);
     onDone && onDone();
   }
+
+  const history = task.review_history || [];
 
   return (
     <div className="panel" style={{ background: "var(--paper-2)", marginBottom: 12 }}>
@@ -63,12 +66,12 @@ export default function ReviewActions({ task, onDone }) {
               </div>
             </div>
             <div className="field">
-              <label>Note (optional)</label>
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="What needs to change?" />
+              <label>What needs to change (required)</label>
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Explain exactly what the member must fix" />
             </div>
             <div className="modal-actions">
               <button className="btn ghost" onClick={() => setMode(null)}>Back</button>
-              <button className="btn" onClick={sendBack} disabled={busy}>
+              <button className="btn" onClick={sendBack} disabled={busy || !note.trim() || !resubmitBy}>
                 {busy ? "…" : "Send back"}
               </button>
             </div>
@@ -84,6 +87,21 @@ export default function ReviewActions({ task, onDone }) {
             </button>
           </div>
         ))}
+
+      {history.length > 0 && (
+        <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+          <div className="su-h">Change-request history ({history.length})</div>
+          {history.map((h, i) => (
+            <div key={i} style={{ fontSize: 12, padding: "5px 0", borderBottom: i < history.length - 1 ? "1px dashed var(--line)" : "none" }}>
+              <span style={{ color: "var(--amber)", fontWeight: 700 }}>Round {i + 1}</span>{" "}
+              <span style={{ color: "var(--muted)" }}>
+                · {uname(h.by)}{h.resubmit_by ? ` · resubmit by ${fmtDate(h.resubmit_by)}` : ""}
+              </span>
+              <div>“{h.note}”</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

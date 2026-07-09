@@ -82,6 +82,9 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
             <span className="movedflag">moved {t.due_date_change_count}×</span>
           )}
           {overdue && <span className="warnflag">Overdue</span>}
+          {t.status === "changes_requested" && t.resubmit_by && (
+            <span className="warnflag">resubmit by {fmtDate(t.resubmit_by)}</span>
+          )}
           {t.carry_forward_count > 0 && (
             <span className="warnflag">↻ {t.carry_forward_count}×</span>
           )}

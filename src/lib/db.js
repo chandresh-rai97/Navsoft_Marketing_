@@ -15,6 +15,7 @@ const TABLES = {
   taskDependencies: "task_dependencies",
   projectMembers: "project_members",
   taskCollaborators: "task_collaborators",
+  notifications: "notifications",
 };
 
 // Load the whole team's working set in parallel. Fine for a single-team MVP.
