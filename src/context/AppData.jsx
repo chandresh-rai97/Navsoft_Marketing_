@@ -16,7 +16,7 @@ import {
   writeAudit,
   runCarrySweep,
 } from "../lib/db.js";
-import { todayStr, shiftStr, nowIso, isoWeek } from "../lib/format.js";
+import { todayStr, shiftStr, nowIso, isoWeek, nextOccurrence } from "../lib/format.js";
 import {
   OPEN_STATUSES,
   MOVE_REASON_AFTER,
@@ -258,7 +258,7 @@ export function AppDataProvider({ children }) {
       audit("task", t.id, "completed", null, { on_time: onTime(updated) });
       if (t.recurrence && t.recurrence !== "none") {
         const step = t.recurrence === "daily" ? 1 : 7;
-        const nd = shiftStr(t.due_date, step);
+        const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
         await insertRow("tasks", {
           title: t.title,
           description: t.description,
@@ -485,7 +485,7 @@ export function AppDataProvider({ children }) {
       audit("task", id, "accepted", null, null);
       if (t.recurrence && t.recurrence !== "none") {
         const step = t.recurrence === "daily" ? 1 : 7;
-        const nd = shiftStr(t.due_date, step);
+        const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
         await insertRow("tasks", {
           title: t.title,
           description: t.description,

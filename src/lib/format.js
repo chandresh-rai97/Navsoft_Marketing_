@@ -21,6 +21,14 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
+// Next occurrence date for a recurring task. Advance by `step` days from the
+// LATER of the current due date and today, so a task completed late resumes on
+// schedule instead of being born already in the past (and wrongly "overdue").
+export function nextOccurrence(dueDate, step, today = todayStr()) {
+  const base = dueDate >= today ? dueDate : today;
+  return shiftStr(base, step);
+}
+
 export function fmtDate(s) {
   if (!s) return "—";
   const [y, m, d] = s.split("-").map(Number);
