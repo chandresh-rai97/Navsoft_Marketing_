@@ -25,15 +25,21 @@ export const STATUS_LABEL = {
   cancelled: "Cancelled",
 };
 
-// Statuses that count a task as still "open" / needing attention.
+// Statuses that count a task as still "open" / the member's pending work.
+// NOTE: 'done_pending_acceptance' (submitted, awaiting review) is intentionally
+// NOT here — once submitted, the ball is with the reviewer, so the task must not
+// count as overdue or pending against the member. 'changes_requested' stays,
+// because that work is back on the member.
 export const OPEN_STATUSES = [
   "not_started",
   "in_progress",
   "blocked",
   "changes_requested",
   "carried_forward",
-  "done_pending_acceptance",
 ];
+
+// A submitted task is flagged stale (reviewer is chased) after this many days.
+export const REVIEW_STALE_DAYS = 2;
 
 // Statuses a member can still actively work on (before submitting).
 export const WORKABLE_STATUSES = [

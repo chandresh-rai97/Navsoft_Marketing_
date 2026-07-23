@@ -296,7 +296,7 @@ export function AppDataProvider({ children }) {
           };
         }
         if (t.acceptance_required) {
-          await updateRow("tasks", t.id, { status: "done_pending_acceptance" });
+          await updateRow("tasks", t.id, { status: "done_pending_acceptance", submitted_at: nowIso() });
           audit("task", t.id, "submitted_for_acceptance", null, null);
         } else {
           await markDone(t);
@@ -462,6 +462,7 @@ export function AppDataProvider({ children }) {
         status: "done_pending_acceptance",
         proof_link: proofLink || null,
         resubmit_by: null,
+        submitted_at: nowIso(), // starts the reviewer's "waiting" clock
       });
       audit("task", id, "submitted", null, { proof_link: proofLink || null });
       await refresh();
