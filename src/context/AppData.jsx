@@ -182,6 +182,10 @@ export function AppDataProvider({ children }) {
   // Who must review a submitted task: the project's manager — unless the person
   // who did the work is themselves a manager/admin, in which case it goes to the
   // admin (nobody reviews their own work).
+  // Who reviews a submitted task (for display). Routing is by the ASSIGNEE (the
+  // person who did & submitted it): a manager's/admin's own task → the admin; a
+  // member's task → that project's manager (lead), falling back to the admin
+  // only if the project has no lead. Nobody reviews their own work.
   const reviewerId = useCallback(
     (t) => {
       const assignee = db.users.find((u) => u.id === t.assignee_user_id);
@@ -189,14 +193,26 @@ export function AppDataProvider({ children }) {
       if (assignee && (assignee.role === "manager" || assignee.role === "admin"))
         return admin?.id || null;
       const lead = db.projects.find((p) => p.id === t.project_id)?.lead_user_id;
-      if (lead && lead !== t.assignee_user_id) return lead;
-      return admin?.id || null;
+      return lead || admin?.id || null;
     },
     [db.users, db.projects]
   );
+  // Can the current user approve/reject this task? Enforced identically in the DB
+  // by the enforce_review_routing trigger (migration 0010).
   const canReview = useCallback(
-    (t) => !!me && (me.role === "admin" || reviewerId(t) === me.id),
-    [me, reviewerId]
+    (t) => {
+      if (!me) return false;
+      const assignee = db.users.find((u) => u.id === t.assignee_user_id);
+      // a manager's/admin's own submission → any admin approves
+      if (assignee && (assignee.role === "manager" || assignee.role === "admin")) {
+        return me.role === "admin";
+      }
+      // a member's submission → the project's manager (lead); admin only if none
+      const lead = db.projects.find((p) => p.id === t.project_id)?.lead_user_id;
+      if (lead) return me.id === lead;
+      return me.role === "admin";
+    },
+    [me, db.users, db.projects]
   );
 
   const membersByProject = useMemo(() => {
@@ -263,6 +279,7 @@ export function AppDataProvider({ children }) {
           title: t.title,
           description: t.description,
           assignee_user_id: t.assignee_user_id,
+          assigned_by_user_id: t.assigned_by_user_id, // preserve original assigner
           project_id: t.project_id,
           key_result_id: t.key_result_id,
           status: "not_started",
@@ -366,6 +383,10 @@ export function AppDataProvider({ children }) {
           definition_of_done: form.definition_of_done,
           due_date: form.due_date,
         };
+        // Reassigning to a different person records the new assigner.
+        if (form.assignee_user_id !== existing.assignee_user_id) {
+          patch.assigned_by_user_id = me.id;
+        }
         if (form.due_date !== existing.due_date) {
           patch.due_date_history = [
             ...(existing.due_date_history || []),
@@ -394,6 +415,7 @@ export function AppDataProvider({ children }) {
           title: form.title,
           description: form.description,
           assignee_user_id: form.assignee_user_id,
+          assigned_by_user_id: me.id, // who created/assigned this task
           project_id: form.project_id,
           key_result_id: form.key_result_id || null, // Key Result is optional
           status: form.status === "done" ? "not_started" : form.status,
@@ -491,6 +513,7 @@ export function AppDataProvider({ children }) {
           title: t.title,
           description: t.description,
           assignee_user_id: t.assignee_user_id,
+          assigned_by_user_id: t.assigned_by_user_id, // preserve original assigner
           project_id: t.project_id,
           key_result_id: t.key_result_id,
           status: "not_started",
@@ -573,12 +596,12 @@ export function AppDataProvider({ children }) {
   const reassignTasks = useCallback(
     async (ids, userId) => {
       for (const id of ids) {
-        await updateRow("tasks", id, { assignee_user_id: userId });
+        await updateRow("tasks", id, { assignee_user_id: userId, assigned_by_user_id: me.id });
         audit("task", id, "reassigned", null, { assignee_user_id: userId });
       }
       await refresh();
     },
-    [audit, refresh]
+    [me, audit, refresh]
   );
 
   const rescheduleTasks = useCallback(
@@ -660,6 +683,7 @@ export function AppDataProvider({ children }) {
         await insertRow("tasks", {
           title,
           assignee_user_id: me.id,
+          assigned_by_user_id: me.id,
           project_id: defP ? defP.id : null,
           key_result_id: defK ? defK.id : null,
           status: "not_started",
@@ -1014,6 +1038,7 @@ export function AppDataProvider({ children }) {
           try {
             const created = await insertRow("tasks", {
               ...payload,
+              assigned_by_user_id: me.id, // the importer is the assigner
               original_due_date: dueDate, // on-time baseline = the Due Date
             });
             audit("task", created.id, "imported_create", null, null);

@@ -57,7 +57,8 @@ Run **every file in `supabase/migrations/` in numeric order** (0001 → 0006), t
 7. `0007_manager_scope_notifications.sql` — scope managers to their own projects (RLS), required change-request comments + history, and in-app notifications.
 8. `0008_fix_recurring_overdue.sql` — one-time correction of recurring tasks wrongly shown overdue.
 9. `0009_keep_submitted.sql` — stop the carry-forward sweep reverting submitted-for-review tasks; add `submitted_at`; restore already-reverted rows.
-10. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
+10. `0010_review_routing_assigned_by.sql` — DB-enforced approval routing (member→project manager, manager→admin) + `assigned_by_user_id`.
+11. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
 
 (`supabase/cleanup_users.sql` is a separate optional one-off for pruning demo accounts.)
 

@@ -55,13 +55,13 @@ function navConfig(role) {
 }
 
 export default function Layout({ view, navigate, children }) {
-  const { me, db, signOut, canReview, isAdmin, unreadCount } = useApp();
+  const { me, db, signOut, canReview, unreadCount } = useApp();
   if (!me) return null;
   const cfg = navConfig(me.role);
   const today = todayStr();
 
   const pendingReview = db.tasks.filter(
-    (t) => t.status === "done_pending_acceptance" && (isAdmin() || canReview(t))
+    (t) => t.status === "done_pending_acceptance" && canReview(t)
   ).length;
   const openBlockers = db.blockers.filter((b) => b.status === "open").length;
   const needsAttention =

@@ -202,6 +202,10 @@ export default function TaskModal({ id, onClose }) {
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
+          {existing?.assigned_by_user_id &&
+            existing.assigned_by_user_id !== existing.assignee_user_id && (
+              <div className="hint">Assigned by {uname(existing.assigned_by_user_id)}</div>
+            )}
         </div>
         <div className="field">
           <label>Status</label>

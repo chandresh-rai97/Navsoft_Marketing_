@@ -71,6 +71,11 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
               ⛓ Depends on: {dependsOn}
             </span>
           )}
+          {t.assigned_by_user_id && t.assigned_by_user_id !== t.assignee_user_id && (
+            <span className="chip" title="Assigned by">
+              👤 Assigned by {uname(t.assigned_by_user_id)}
+            </span>
+          )}
           <StatusTag status={t.status} />
           <span>
             Due {fmtDate(t.due_date)}

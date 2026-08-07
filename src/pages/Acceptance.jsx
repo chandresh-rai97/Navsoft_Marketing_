@@ -22,7 +22,9 @@ export default function Acceptance() {
 
   const pending = db.tasks
     .filter((t) => t.status === "done_pending_acceptance")
-    .filter((t) => isAdmin() || isViewer() || canReview(t))
+    // admin is a reviewer only via canReview (manager submissions / projects the
+    // admin leads) — a member's task never lands in the admin's queue.
+    .filter((t) => isViewer() || canReview(t))
     .map((t) => ({ t, waited: t.submitted_at ? daysSince(t.submitted_at) : null }))
     .sort((a, b) => {
       // longest wait first; unknown submit time (null) goes last
