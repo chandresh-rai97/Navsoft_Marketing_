@@ -1,0 +1,4 @@
+.venv/
+leap_state.json
+*.xlsx
+__pycache__/
