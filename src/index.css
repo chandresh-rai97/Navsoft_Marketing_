@@ -197,3 +197,16 @@ tr.clk:hover td { background: var(--paper-2); }
 .eo-yellow { background: var(--amber-soft) !important; color: var(--amber); font-weight: 700; }
 .eo-red { background: var(--red-soft) !important; color: var(--red); font-weight: 700; }
 .eo-metricname { min-width: 200px; }
+.eo-table th, .eo-table td { padding: 7px 10px; }
+.eo-table tbody tr:hover td:not(.eo-sticky):not(.eo-green):not(.eo-yellow):not(.eo-red) { background: #faf9f6; }
+.eo-num { text-align: right; font-family: var(--mono); }
+.eo-mstart { border-left: 2px solid var(--muted-2) !important; }
+.eo-xbtn { cursor: pointer; color: var(--muted-2); font-weight: 700; margin-left: 6px; font-size: 12px; }
+.eo-xbtn:hover { color: var(--red); }
+.eo-addrow td { background: var(--paper); text-align: left; }
+.eo-cols { position: relative; }
+.eo-colsmenu { position: absolute; right: 0; top: 32px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,.14); padding: 12px 14px; z-index: 30; width: 270px; max-height: 62vh; overflow: auto; }
+.eo-colsmenu h4 { margin: 8px 0 3px; font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.eo-colsmenu label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0; white-space: normal; }
+.eo-colsmenu label input { width: auto; }
+.eo-colsmenu .hint { margin: 2px 0 6px; }

@@ -941,6 +941,14 @@ export function AppDataProvider({ children }) {
     },
     [refresh]
   );
+  const eoDeleteMonth = useCallback(
+    async (projectId, month) => {
+      await supabase.from("eo_entries").delete().eq("project_id", projectId).eq("month", month);
+      await supabase.from("eo_months").delete().eq("project_id", projectId).eq("month", month);
+      await refresh();
+    },
+    [refresh]
+  );
   // Upsert one metric×month cell (only the given field(s); other cells untouched).
   const eoSaveEntry = useCallback(
     async (projectId, metricId, month, patch) => {
@@ -1194,6 +1202,7 @@ export function AppDataProvider({ children }) {
     eoUpdateMetric,
     eoDeleteMetric,
     eoAddMonth,
+    eoDeleteMonth,
     eoSaveEntry,
   };
 

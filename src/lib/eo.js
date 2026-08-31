@@ -1,5 +1,19 @@
 // Efforts vs Outcome — pure helpers that mirror the Excel template's formulas.
 
+// The section is limited to exactly these four channels (matched to projects by
+// name, case/space-insensitive). Order here is the display order.
+export const EO_CHANNELS = ["Email Marketing", "SEO", "Performance Marketing", "Social Media"];
+const EO_ALLOWED = new Set(EO_CHANNELS.map((n) => n.toLowerCase()));
+export function isAllowedChannel(name) {
+  return EO_ALLOWED.has((name || "").trim().toLowerCase());
+}
+// Return the allowed channel projects in canonical order.
+export function allowedChannels(projects) {
+  return EO_CHANNELS.map((n) => projects.find((p) => (p.name || "").trim().toLowerCase() === n.toLowerCase())).filter(
+    Boolean
+  );
+}
+
 // ---- month helpers ('YYYY-MM' keys sort lexicographically) ----
 export function currentMonthKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
