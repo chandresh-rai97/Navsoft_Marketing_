@@ -58,7 +58,10 @@ Run **every file in `supabase/migrations/` in numeric order** (0001 → 0006), t
 8. `0008_fix_recurring_overdue.sql` — one-time correction of recurring tasks wrongly shown overdue.
 9. `0009_keep_submitted.sql` — stop the carry-forward sweep reverting submitted-for-review tasks; add `submitted_at`; restore already-reverted rows.
 10. `0010_review_routing_assigned_by.sql` — DB-enforced approval routing (member→project manager, manager→admin) + `assigned_by_user_id`.
-11. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
+11. `0011_efforts_outcome.sql` — "Efforts vs Outcome" tracker (eo_metrics / eo_months / eo_entries + RLS scoped like managers).
+12. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
+
+*(Optional: `supabase/eo_seed.sql` loads the marketing template's exact metric rows for projects named Social Media / Email Marketing / SEO / Performance Marketing, plus Social Media sample data.)*
 
 (`supabase/cleanup_users.sql` is a separate optional one-off for pruning demo accounts.)
 

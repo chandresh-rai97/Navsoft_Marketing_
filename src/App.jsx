@@ -18,6 +18,7 @@ import Grid from "./pages/Grid.jsx";
 import Acceptance from "./pages/Acceptance.jsx";
 import Done from "./pages/Done.jsx";
 import Reviews from "./pages/Reviews.jsx";
+import EffortsOutcome from "./pages/EffortsOutcome.jsx";
 import Settings from "./pages/Settings.jsx";
 
 const ROUTES = {
@@ -34,6 +35,7 @@ const ROUTES = {
   people: People,
   grid: Grid,
   reviews: Reviews,
+  efforts: EffortsOutcome,
   settings: Settings,
 };
 
@@ -48,6 +50,7 @@ const MANAGER_VIEWS = [
   "done",
   "grid",
   "reviews",
+  "efforts",
 ];
 // Viewer = executive assistant: read-only access to every oversight view.
 const VIEWER_VIEWS = [
@@ -58,6 +61,7 @@ const VIEWER_VIEWS = [
   "people",
   "grid",
   "reviews",
+  "efforts",
   "goals",
   "blockers",
 ];

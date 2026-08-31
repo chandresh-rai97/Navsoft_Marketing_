@@ -180,3 +180,20 @@ tr.clk:hover td { background: var(--paper-2); }
 .note { background: var(--accent-soft); border: 1px solid #bfe0d9; color: #0c5e53; font-size: 12px; line-height: 1.5; padding: 9px 12px; border-radius: 9px; margin-bottom: 14px; }
 .pointer { cursor: pointer; }
 .hidden { display: none !important; }
+
+/* Efforts vs Outcome tracker */
+.eo-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.eo-table { border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; }
+.eo-table th, .eo-table td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 6px 8px; text-align: center; background: #fff; }
+.eo-table th { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); position: sticky; top: 0; z-index: 3; }
+.eo-sticky { position: sticky; z-index: 2; background: #fff; text-align: left; }
+.eo-table th.eo-sticky { z-index: 4; }
+.eo-monthhead { background: var(--paper-2); font-family: var(--sans); font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 700; }
+.eo-section td { background: var(--paper); font-weight: 700; text-align: left; color: var(--ink); }
+.eo-auto { color: var(--muted); background: var(--paper); }
+.eo-in { width: 70px; border: 1px solid var(--line); border-radius: 5px; padding: 3px 5px; font-size: 12px; text-align: right; font-family: var(--mono); }
+.eo-in:disabled { background: var(--paper); border-color: transparent; color: var(--ink); }
+.eo-green { background: var(--green-soft) !important; color: var(--green); font-weight: 700; }
+.eo-yellow { background: var(--amber-soft) !important; color: var(--amber); font-weight: 700; }
+.eo-red { background: var(--red-soft) !important; color: var(--red); font-weight: 700; }
+.eo-metricname { min-width: 200px; }

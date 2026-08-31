@@ -20,6 +20,7 @@ const COMMAND_NAV = [
   ["people", "People / Workload"],
   ["grid", "Projects"], // summary boxes → drill-in (route key kept as "grid")
   ["reviews", "Reviews"],
+  ["efforts", "Efforts vs Outcome"],
   ["settings", "Admin Settings"],
 ];
 
@@ -33,6 +34,7 @@ const VIEWER_NAV = [
   ["people", "People / Workload"],
   ["grid", "Projects"],
   ["reviews", "Reviews"],
+  ["efforts", "Efforts vs Outcome"],
   ["goals", "Goals"],
   ["blockers", "Blockers"],
 ];

@@ -42,6 +42,9 @@ const EMPTY_DB = {
   projectMembers: [],
   taskCollaborators: [],
   notifications: [],
+  eoMetrics: [],
+  eoMonths: [],
+  eoEntries: [],
 };
 
 export function AppDataProvider({ children }) {
@@ -908,6 +911,50 @@ export function AppDataProvider({ children }) {
   }, [myNotifications, refresh]);
 
   // =========================================================================
+  // EFFORTS vs OUTCOME (per channel = per project)
+  // =========================================================================
+  const eoAddMetric = useCallback(
+    async (projectId, data) => {
+      await insertRow("eo_metrics", { project_id: projectId, ...data });
+      await refresh();
+    },
+    [refresh]
+  );
+  const eoUpdateMetric = useCallback(
+    async (id, patch) => {
+      await updateRow("eo_metrics", id, patch);
+      await refresh();
+    },
+    [refresh]
+  );
+  const eoDeleteMetric = useCallback(
+    async (id) => {
+      await deleteRow("eo_metrics", id); // entries cascade
+      await refresh();
+    },
+    [refresh]
+  );
+  const eoAddMonth = useCallback(
+    async (projectId, month) => {
+      await upsertRow("eo_months", { project_id: projectId, month }, "project_id,month");
+      await refresh();
+    },
+    [refresh]
+  );
+  // Upsert one metric×month cell (only the given field(s); other cells untouched).
+  const eoSaveEntry = useCallback(
+    async (projectId, metricId, month, patch) => {
+      await upsertRow(
+        "eo_entries",
+        { project_id: projectId, metric_id: metricId, month, ...patch },
+        "metric_id,month"
+      );
+      await refresh();
+    },
+    [refresh]
+  );
+
+  // =========================================================================
   // CSV IMPORT (My Tasks → Import from spreadsheet)
   // =========================================================================
   const STATUS_FROM_LABEL = {
@@ -1142,6 +1189,12 @@ export function AppDataProvider({ children }) {
     createWeeklyPriority,
     // csv import
     importTasks,
+    // efforts vs outcome
+    eoAddMetric,
+    eoUpdateMetric,
+    eoDeleteMetric,
+    eoAddMonth,
+    eoSaveEntry,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

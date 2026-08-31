@@ -16,6 +16,9 @@ const TABLES = {
   projectMembers: "project_members",
   taskCollaborators: "task_collaborators",
   notifications: "notifications",
+  eoMetrics: "eo_metrics",
+  eoMonths: "eo_months",
+  eoEntries: "eo_entries",
 };
 
 // Load the whole team's working set in parallel. Fine for a single-team MVP.
