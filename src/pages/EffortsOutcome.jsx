@@ -5,7 +5,7 @@ import { useDialog } from "../components/Dialog.jsx";
 import PageHead from "../components/PageHead.jsx";
 import EoCell from "../components/EoCell.jsx";
 import {
-  computeChannel,
+  computeChannelV2,
   channelMonthSummary,
   attainColor,
   fmtPct,
@@ -14,6 +14,10 @@ import {
   monthAdd,
   currentMonthKey,
   allowedChannels,
+  weekLabel,
+  weekMonth,
+  weekNum,
+  makeWeekKey,
 } from "../lib/eo.js";
 
 const CONFIG_COLS = [
@@ -23,12 +27,12 @@ const CONFIG_COLS = [
   { key: "carry", label: "Carry?", w: 66 },
 ];
 const SUB_COLS = [
-  { key: "base", label: "Base Target", calc: false },
-  { key: "carried", label: "Carried In", calc: true },
-  { key: "total", label: "Total Target", calc: true },
-  { key: "achieved", label: "Achieved", calc: false },
-  { key: "attain", label: "Attain %", calc: true },
-  { key: "tocarry", label: "To Carry", calc: true },
+  { key: "base", label: "Base Target" },
+  { key: "carried", label: "Carried In" },
+  { key: "total", label: "Total Target" },
+  { key: "achieved", label: "Achieved" },
+  { key: "attain", label: "Attain %" },
+  { key: "tocarry", label: "To Carry" },
 ];
 
 function sortMetrics(metrics) {
@@ -41,29 +45,22 @@ function sortMetrics(metrics) {
   );
 }
 
-function MonthFilter({ allMonths, from, to, setFrom, setTo }) {
+function PeriodFilter({ periods, from, to, setFrom, setTo, label }) {
   return (
     <div className="filters" style={{ marginBottom: 0 }}>
-      <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Months:</span>
+      <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Range:</span>
       <select value={from} onChange={(e) => setFrom(e.target.value)}>
-        {allMonths.map((m) => (
-          <option key={m} value={m}>From {monthLabel(m)}</option>
-        ))}
+        {periods.map((m) => (<option key={m} value={m}>From {label(m)}</option>))}
       </select>
       <select value={to} onChange={(e) => setTo(e.target.value)}>
-        {allMonths.map((m) => (
-          <option key={m} value={m}>To {monthLabel(m)}</option>
-        ))}
+        {periods.map((m) => (<option key={m} value={m}>To {label(m)}</option>))}
       </select>
     </div>
   );
 }
 
 export default function EffortsOutcome() {
-  const { db, isAdmin, isViewer, isProjectManager, uname, eoAddMonth, eoDeleteMonth, eoSaveEntry } = useApp();
-  const modals = useModals();
-
-  // exactly the four allowed channels (projects matched by name)
+  const { db, isAdmin, isViewer, isProjectManager } = useApp();
   const allChannels = useMemo(() => allowedChannels(db.projects), [db.projects]);
   const myChannels = useMemo(
     () => (isAdmin() || isViewer() ? allChannels : allChannels.filter((p) => isProjectManager(p.id))),
@@ -79,29 +76,18 @@ export default function EffortsOutcome() {
     <>
       <PageHead
         title="Efforts vs Outcome"
-        sub="Monthly effort & outcome targets vs actuals, per channel. Carried-forward shortfalls roll into the next month."
+        sub="Monthly or weekly effort & outcome targets vs actuals, per channel. Carried-forward shortfalls roll into the next period."
         actions={
           <select value={channel || ""} onChange={(e) => setChannel(e.target.value)}>
             {canSeeDashboard && <option value="dashboard">Dashboard (all channels)</option>}
-            {myChannels.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
+            {myChannels.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
           </select>
         }
       />
       {channel === "dashboard" ? (
         <DashboardView db={db} channels={allChannels} />
       ) : channel ? (
-        <ChannelView
-          key={channel}
-          projectId={channel}
-          canEdit={!isViewer() && isProjectManager(channel)}
-          db={db}
-          eoAddMonth={eoAddMonth}
-          eoDeleteMonth={eoDeleteMonth}
-          eoSaveEntry={eoSaveEntry}
-          openRows={() => modals.openEoRows(channel)}
-        />
+        <ChannelView key={channel} projectId={channel} canEdit={!isViewer() && isProjectManager(channel)} />
       ) : (
         <div className="empty">No channel to show. Ask an admin to make you a channel lead.</div>
       )}
@@ -109,39 +95,33 @@ export default function EffortsOutcome() {
   );
 }
 
-// ---------------- Dashboard: one row per channel ----------------
+// ---------------- Dashboard (unchanged: monthly rollup) ----------------
 function DashboardView({ db, channels }) {
   const trackerProjects = channels.filter((p) => db.eoMetrics.some((m) => m.project_id === p.id));
   const allMonths = useMemo(() => {
     const s = new Set([currentMonthKey()]);
-    db.eoMonths.forEach((m) => s.add(m.month));
-    db.eoEntries.forEach((e) => s.add(e.month));
+    db.eoMonths.filter((m) => (m.granularity || "month") === "month").forEach((m) => s.add(m.month));
+    db.eoEntries.filter((e) => (e.granularity || "month") === "month").forEach((e) => s.add(e.month));
     return [...s].sort();
   }, [db.eoMonths, db.eoEntries]);
   const [from, setFrom] = useState(allMonths[0]);
   const [to, setTo] = useState(allMonths[allMonths.length - 1]);
   const shown = allMonths.filter((m) => m >= from && m <= to);
   const wrapRef = useRef(null);
-  useEffect(() => {
-    if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth;
-  }, [shown.length]);
+  useEffect(() => { if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth; }, [shown.length]);
 
   const perChannel = trackerProjects.map((p) => {
     const metrics = sortMetrics(db.eoMetrics.filter((m) => m.project_id === p.id));
     const entries = db.eoEntries.filter((e) => e.project_id === p.id);
-    const chMonths = [
-      ...new Set([
-        ...db.eoMonths.filter((mm) => mm.project_id === p.id).map((mm) => mm.month),
-        ...entries.map((e) => e.month),
-      ]),
-    ].sort();
-    const cells = computeChannel(metrics, chMonths.length ? chMonths : [currentMonthKey()], entries);
-    return { p, metrics, cells };
+    const chMonths = [...new Set([...db.eoMonths.filter((mm) => mm.project_id === p.id && (mm.granularity || "month") === "month").map((mm) => mm.month), ...entries.filter((e) => (e.granularity || "month") === "month").map((e) => e.month)])].sort();
+    const chWeeks = [...new Set([...db.eoMonths.filter((mm) => mm.project_id === p.id && mm.granularity === "week").map((mm) => mm.month), ...entries.filter((e) => e.granularity === "week").map((e) => e.month)])].sort((a, b) => a.localeCompare(b) || weekNum(a) - weekNum(b));
+    const { monthCells } = computeChannelV2(metrics, chMonths.length ? chMonths : [currentMonthKey()], chWeeks, entries);
+    return { p, metrics, cells: monthCells };
   });
 
   return (
     <>
-      <MonthFilter allMonths={allMonths} from={from} to={to} setFrom={setFrom} setTo={setTo} />
+      <PeriodFilter periods={allMonths} from={from} to={to} setFrom={setFrom} setTo={setTo} label={monthLabel} />
       {trackerProjects.length === 0 ? (
         <div className="empty" style={{ marginTop: 14 }}>No channels have a tracker yet.</div>
       ) : (
@@ -150,18 +130,13 @@ function DashboardView({ db, channels }) {
             <thead>
               <tr>
                 <th className="eo-sticky" style={{ left: 0, minWidth: 190, maxWidth: 190, zIndex: 5 }}>Channel</th>
-                {shown.map((mk) => (
-                  <th key={mk} className="eo-monthhead eo-mstart" colSpan={4}>{monthLabel(mk)}</th>
-                ))}
+                {shown.map((mk) => (<th key={mk} className="eo-monthhead eo-mstart" colSpan={4}>{monthLabel(mk)}</th>))}
               </tr>
               <tr>
                 <th className="eo-sticky" style={{ left: 0, minWidth: 190, maxWidth: 190, zIndex: 5 }}></th>
                 {shown.map((mk) => (
                   <React.Fragment key={mk}>
-                    <th className="eo-mstart">Effort %</th>
-                    <th>Outcome %</th>
-                    <th>Carried Fwd</th>
-                    <th># Lagging</th>
+                    <th className="eo-mstart">Effort %</th><th>Outcome %</th><th>Carried Fwd</th><th># Lagging</th>
                   </React.Fragment>
                 ))}
               </tr>
@@ -177,9 +152,7 @@ function DashboardView({ db, channels }) {
                         <td className={"eo-mstart " + attainColor(s.effortPct)}>{fmtPct(s.effortPct)}</td>
                         <td className={attainColor(s.outcomePct)}>{fmtPct(s.outcomePct)}</td>
                         <td className="eo-auto eo-num">{s.carriedFwd ? fmtNum(s.carriedFwd) : ""}</td>
-                        <td className="eo-auto eo-num" style={s.lagging ? { color: "var(--red)", fontWeight: 700 } : undefined}>
-                          {s.lagging || ""}
-                        </td>
+                        <td className="eo-auto eo-num" style={s.lagging ? { color: "var(--red)", fontWeight: 700 } : undefined}>{s.lagging || ""}</td>
                       </React.Fragment>
                     );
                   })}
@@ -190,78 +163,78 @@ function DashboardView({ db, channels }) {
         </div>
       )}
       <div className="sub" style={{ marginTop: 10 }}>
-        Effort % / Outcome % = average attainment across the channel's effort / outcome metrics that month.
-        Carried Fwd = total effort shortfall rolling into next month. # Lagging = metrics that finished below 100%.
+        Rolls up from each channel's monthly numbers (which themselves roll up from weeks where weekly data exists).
         Green ≥ 100%, yellow 80–99%, red &lt; 80%.
       </div>
     </>
   );
 }
 
-// ---------------- Column preferences (freeze / hide), persisted per channel ---
 function useColPrefs(projectId) {
   const key = "eo-cols-" + projectId;
   const [prefs, setPrefs] = useState(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {}
+    try { const raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch (e) {}
     return { pins: CONFIG_COLS.map((c) => c.key), hiddenCfg: [], hiddenSub: [] };
   });
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(prefs));
-    } catch (e) {}
-  }, [key, prefs]);
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(prefs)); } catch (e) {} }, [key, prefs]);
   return [prefs, setPrefs];
 }
 
-// ---------------- Channel tracker (spreadsheet) ----------------
-function ChannelView({ projectId, canEdit, db, eoAddMonth, eoDeleteMonth, eoSaveEntry, openRows }) {
-  const { eoAddMetric, eoDeleteMetric } = useApp();
+// ---------------- Channel tracker (month or week) ----------------
+function ChannelView({ projectId, canEdit }) {
+  const { db, eoAddPeriod, eoDeletePeriod, eoSaveEntry, eoAddMetric, eoDeleteMetric } = useApp();
+  const modals = useModals();
   const dlg = useDialog();
 
-  const metrics = useMemo(
-    () => sortMetrics(db.eoMetrics.filter((m) => m.project_id === projectId)),
-    [db.eoMetrics, projectId]
-  );
+  const [gran, setGran] = useState("month");
+  const metrics = useMemo(() => sortMetrics(db.eoMetrics.filter((m) => m.project_id === projectId)), [db.eoMetrics, projectId]);
   const entries = useMemo(() => db.eoEntries.filter((e) => e.project_id === projectId), [db.eoEntries, projectId]);
+
   const allMonths = useMemo(() => {
     const s = new Set([currentMonthKey()]);
-    db.eoMonths.filter((m) => m.project_id === projectId).forEach((m) => s.add(m.month));
-    entries.forEach((e) => s.add(e.month));
+    db.eoMonths.filter((m) => m.project_id === projectId && (m.granularity || "month") === "month").forEach((m) => s.add(m.month));
+    entries.filter((e) => (e.granularity || "month") === "month").forEach((e) => s.add(e.month));
     return [...s].sort();
   }, [db.eoMonths, entries, projectId]);
+  const allWeeks = useMemo(() => {
+    const s = new Set();
+    db.eoMonths.filter((m) => m.project_id === projectId && m.granularity === "week").forEach((m) => s.add(m.month));
+    entries.filter((e) => e.granularity === "week").forEach((e) => s.add(e.month));
+    return [...s].sort((a, b) => weekMonth(a).localeCompare(weekMonth(b)) || weekNum(a) - weekNum(b));
+  }, [db.eoMonths, entries, projectId]);
 
-  // Default window spans the FULL range of months that have data.
-  const [from, setFrom] = useState(allMonths[0]);
-  const [to, setTo] = useState(allMonths[allMonths.length - 1]);
+  const { monthCells, weekCells } = useMemo(
+    () => computeChannelV2(metrics, allMonths, allWeeks, entries),
+    [metrics, allMonths, allWeeks, entries]
+  );
+
+  const periods = gran === "week" ? allWeeks : allMonths;
+  const cells = gran === "week" ? weekCells : monthCells;
+  const labelOf = gran === "week" ? weekLabel : monthLabel;
+  const monthHasWeeks = (mk) => allWeeks.some((w) => weekMonth(w) === mk);
+
+  const [from, setFrom] = useState(periods[0]);
+  const [to, setTo] = useState(periods[periods.length - 1]);
   useEffect(() => {
-    setFrom(allMonths[0]);
-    setTo(allMonths[allMonths.length - 1]);
-  }, [projectId, allMonths.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  const shown = allMonths.filter((m) => m >= from && m <= to);
+    setFrom(periods[0]);
+    setTo(periods[periods.length - 1]);
+  }, [projectId, gran, periods.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = periods.filter((m) => m >= from && m <= to);
 
-  const cells = useMemo(() => computeChannel(metrics, allMonths, entries), [metrics, allMonths, entries]);
   const [prefs, setPrefs] = useColPrefs(projectId);
   const [showCols, setShowCols] = useState(false);
+  const [wkMonth, setWkMonth] = useState("");
 
   const wrapRef = useRef(null);
-  useEffect(() => {
-    if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth;
-  }, [shown.length]);
+  useEffect(() => { if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth; }, [shown.length, gran]);
 
-  // resolve visible / pinned config columns (Metric is always shown & pinned)
   const pins = new Set([...(prefs.pins || []), "name"]);
   const hiddenCfg = new Set((prefs.hiddenCfg || []).filter((k) => k !== "name"));
   const hiddenSub = new Set(prefs.hiddenSub || []);
   const shownCfg = CONFIG_COLS.filter((c) => !hiddenCfg.has(c.key));
   const orderedCfg = [];
   let left = 0;
-  shownCfg.filter((c) => pins.has(c.key)).forEach((c) => {
-    orderedCfg.push({ ...c, pinned: true, left });
-    left += c.w;
-  });
+  shownCfg.filter((c) => pins.has(c.key)).forEach((c) => { orderedCfg.push({ ...c, pinned: true, left }); left += c.w; });
   shownCfg.filter((c) => !pins.has(c.key)).forEach((c) => orderedCfg.push({ ...c, pinned: false }));
   const shownSub = SUB_COLS.filter((s) => !hiddenSub.has(s.key));
   const totalCols = orderedCfg.length + shown.length * shownSub.length;
@@ -269,28 +242,32 @@ function ChannelView({ projectId, canEdit, db, eoAddMonth, eoDeleteMonth, eoSave
   const cfgStyle = (c, header) =>
     c.pinned
       ? { left: c.left, minWidth: c.w, maxWidth: c.w, zIndex: header ? 5 : 2 }
-      : { minWidth: c.w, maxWidth: c.w, position: "static" }; // unpinned: scrolls with the table
-
+      : { minWidth: c.w, maxWidth: c.w, position: "static" };
   const configValue = (m, key) =>
     key === "name" ? m.name : key === "unit" ? m.unit : key === "direction" ? (m.direction === "higher" ? "Higher" : "Lower") : m.carry ? "Yes" : "No";
 
-  const subCell = (m, mk, sub) => {
-    const c = cells[m.id]?.[mk] || {};
-    const first = allMonths[0] === mk;
+  function subCell(m, pk, sub) {
+    const c = cells[m.id]?.[pk] || {};
+    if (gran === "week") {
+      if (sub.key === "base") return <EoCell value={c.base} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { base_target: v }, "week")} />;
+      if (sub.key === "carried") return <span className="eo-auto eo-num">{fmtNum(c.carriedIn)}</span>;
+      if (sub.key === "total") return <span className="eo-auto eo-num">{fmtNum(c.total)}</span>;
+      if (sub.key === "achieved") return <EoCell value={c.achieved} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { achieved: v }, "week")} />;
+      if (sub.key === "attain") return fmtPct(c.attain);
+      return <span className="eo-auto eo-num">{c.toCarry ? fmtNum(c.toCarry) : "0"}</span>;
+    }
+    const editable = canEdit && !monthHasWeeks(pk);
+    const first = allMonths[0] === pk;
     if (sub.key === "base")
-      return <EoCell value={c.base} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, mk, { base_target: v })} />;
+      return editable ? <EoCell value={c.base} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { base_target: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.base)}</span>;
     if (sub.key === "carried")
-      return first ? (
-        <EoCell value={c.entry?.carried_in ?? 0} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, mk, { carried_in: v })} />
-      ) : (
-        <span className="eo-auto eo-num">{fmtNum(c.carriedIn)}</span>
-      );
+      return first ? <EoCell value={c.entry?.carried_in ?? 0} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { carried_in: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.carriedIn)}</span>;
     if (sub.key === "total") return <span className="eo-auto eo-num">{fmtNum(c.total)}</span>;
     if (sub.key === "achieved")
-      return <EoCell value={c.achieved} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, mk, { achieved: v })} />;
+      return editable ? <EoCell value={c.achieved} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { achieved: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.achieved)}</span>;
     if (sub.key === "attain") return fmtPct(c.attain);
     return <span className="eo-auto eo-num">{c.toCarry ? fmtNum(c.toCarry) : "0"}</span>;
-  };
+  }
 
   async function addRow(section) {
     const name = await dlg.prompt(`New ${section} metric name:`);
@@ -300,133 +277,112 @@ function ChannelView({ projectId, canEdit, db, eoAddMonth, eoDeleteMonth, eoSave
     await eoAddMetric(projectId, { section, name, unit: "#", direction: "higher", carry: true, position: pos });
   }
   async function removeRow(m) {
-    if (await dlg.confirm(`Remove the metric "${m.name}" and all its monthly values?`)) await eoDeleteMetric(m.id);
+    if (await dlg.confirm(`Remove the metric "${m.name}" and all its values?`)) await eoDeleteMetric(m.id);
   }
-  async function removeMonth(mk) {
-    if (await dlg.confirm(`Remove ${monthLabel(mk)} for this channel? Its values are deleted (this is safe — the calculations for other months are unaffected).`))
-      eoDeleteMonth(projectId, mk);
+  async function removePeriod(pk) {
+    const what = gran === "week" ? weekLabel(pk) : monthLabel(pk);
+    if (await dlg.confirm(`Remove ${what} for this channel? Its values are deleted (this is safe — other periods are unaffected).`))
+      eoDeletePeriod(projectId, pk);
   }
-  const addPrev = () => {
-    const prev = monthAdd(allMonths[0], -1);
-    eoAddMonth(projectId, prev).then(() => setFrom(prev));
-  };
-  const addNext = () => {
-    const next = monthAdd(allMonths[allMonths.length - 1], 1);
-    eoAddMonth(projectId, next).then(() => setTo(next));
+  const addPrevMonth = () => { const prev = monthAdd(allMonths[0], -1); eoAddPeriod(projectId, prev, "month").then(() => setFrom(prev)); };
+  const addNextMonth = () => { const next = monthAdd(allMonths[allMonths.length - 1], 1); eoAddPeriod(projectId, next, "month").then(() => setTo(next)); };
+  const addWeek = () => {
+    const mk = wkMonth || allMonths[allMonths.length - 1];
+    const existing = allWeeks.filter((w) => weekMonth(w) === mk).map(weekNum);
+    const n = (existing.length ? Math.max(...existing) : 0) + 1;
+    eoAddPeriod(projectId, makeWeekKey(mk, n), "week").then(() => setTo(makeWeekKey(mk, n)));
   };
 
   const renderRows = (section) =>
-    metrics
-      .filter((m) => m.section === section)
-      .map((m) => (
-        <tr key={m.id}>
-          {orderedCfg.map((c) => (
-            <td key={c.key} className={"eo-sticky" + (c.key === "name" ? " eo-metricname" : "") + (c.pinned ? "" : "")} style={cfgStyle(c)}>
-              {c.key === "name" ? (
-                <span>
-                  {m.name}
-                  {canEdit && <span className="eo-xbtn" title="Remove metric" onClick={() => removeRow(m)}>×</span>}
-                </span>
-              ) : (
-                configValue(m, c.key)
-              )}
-            </td>
-          ))}
-          {shown.map((mk) =>
-            shownSub.map((sub, i) => (
-              <td key={mk + sub.key} className={(i === 0 ? "eo-mstart " : "") + (sub.key === "attain" ? attainColor(cells[m.id]?.[mk]?.attain) : "")}>
-                {subCell(m, mk, sub)}
-              </td>
-            ))
-          )}
-        </tr>
-      ));
+    metrics.filter((m) => m.section === section).map((m) => (
+      <tr key={m.id}>
+        {orderedCfg.map((c) => (
+          <td key={c.key} className={"eo-sticky" + (c.key === "name" ? " eo-metricname" : "")} style={cfgStyle(c)}>
+            {c.key === "name" ? (
+              <span>{m.name}{canEdit && <span className="eo-xbtn" title="Remove metric" onClick={() => removeRow(m)}>×</span>}</span>
+            ) : configValue(m, c.key)}
+          </td>
+        ))}
+        {shown.map((pk) => shownSub.map((sub, i) => (
+          <td key={pk + sub.key} className={(i === 0 ? "eo-mstart " : "") + (sub.key === "attain" ? attainColor(cells[m.id]?.[pk]?.attain) : "")}>{subCell(m, pk, sub)}</td>
+        )))}
+      </tr>
+    ));
 
   return (
     <>
       <div className="filters" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-        <MonthFilter allMonths={allMonths} from={from} to={to} setFrom={setFrom} setTo={setTo} />
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="seg">
+            <button className={gran === "month" ? "on" : ""} onClick={() => setGran("month")}>Month</button>
+            <button className={gran === "week" ? "on" : ""} onClick={() => setGran("week")}>Week</button>
+          </div>
+          {periods.length > 0 && <PeriodFilter periods={periods} from={from} to={to} setFrom={setFrom} setTo={setTo} label={labelOf} />}
+        </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div className="eo-cols">
             <button className="btn sm ghost" onClick={() => setShowCols((v) => !v)}>⚙ Columns</button>
-            {showCols && (
-              <ColumnsMenu prefs={prefs} setPrefs={setPrefs} close={() => setShowCols(false)} />
-            )}
+            {showCols && <ColumnsMenu prefs={prefs} setPrefs={setPrefs} close={() => setShowCols(false)} />}
           </div>
-          {canEdit && (
+          {canEdit && gran === "month" && (
             <>
-              <button className="btn sm ghost" onClick={addPrev}>+ Previous month</button>
-              <button className="btn sm ghost" onClick={addNext}>+ Next month</button>
-              <button className="btn sm" onClick={openRows}>✏️ Manage rows</button>
+              <button className="btn sm ghost" onClick={addPrevMonth}>+ Prev month</button>
+              <button className="btn sm ghost" onClick={addNextMonth}>+ Next month</button>
             </>
           )}
+          {canEdit && gran === "week" && (
+            <>
+              <select value={wkMonth || allMonths[allMonths.length - 1]} onChange={(e) => setWkMonth(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7 }}>
+                {allMonths.map((mk) => (<option key={mk} value={mk}>{monthLabel(mk)}</option>))}
+              </select>
+              <button className="btn sm ghost" onClick={addWeek}>+ Add week</button>
+            </>
+          )}
+          {canEdit && <button className="btn sm ghost" onClick={() => modals.openEoImport()}>Import data</button>}
+          {canEdit && <button className="btn sm" onClick={() => modals.openEoRows(projectId)}>✏️ Manage rows</button>}
         </div>
       </div>
 
       {metrics.length === 0 ? (
+        <div className="empty" style={{ marginTop: 14 }}>No metrics yet.{canEdit ? " Use “Manage rows” or + Add below." : ""}</div>
+      ) : gran === "week" && periods.length === 0 ? (
         <div className="empty" style={{ marginTop: 14 }}>
-          No metrics yet.{canEdit ? " Use “Manage rows”, or the + Add buttons below, to add effort and outcome metrics." : ""}
+          No weeks yet.{canEdit ? " Pick a month and “+ Add week” to start weekly tracking." : ""}
         </div>
       ) : (
         <div className="eo-wrap" ref={wrapRef} style={{ marginTop: 12 }}>
           <table className="eo-table">
             <thead>
               <tr>
-                {orderedCfg.map((c) => (
-                  <th key={c.key} className="eo-sticky" style={cfgStyle(c, true)}></th>
-                ))}
-                {shown.map((mk) => (
-                  <th key={mk} className="eo-monthhead eo-mstart" colSpan={shownSub.length}>
-                    {monthLabel(mk)}
-                    {canEdit && <span className="eo-xbtn" title="Remove this month" onClick={() => removeMonth(mk)}>×</span>}
+                {orderedCfg.map((c) => (<th key={c.key} className="eo-sticky" style={cfgStyle(c, true)}></th>))}
+                {shown.map((pk) => (
+                  <th key={pk} className="eo-monthhead eo-mstart" colSpan={shownSub.length}>
+                    {labelOf(pk)}
+                    {canEdit && <span className="eo-xbtn" title="Remove this period" onClick={() => removePeriod(pk)}>×</span>}
                   </th>
                 ))}
               </tr>
               <tr>
-                {orderedCfg.map((c) => (
-                  <th key={c.key} className="eo-sticky" style={cfgStyle(c, true)}>{c.label}</th>
-                ))}
-                {shown.map((mk) =>
-                  shownSub.map((sub, i) => (
-                    <th key={mk + sub.key} className={i === 0 ? "eo-mstart" : ""}>{sub.label}</th>
-                  ))
-                )}
+                {orderedCfg.map((c) => (<th key={c.key} className="eo-sticky" style={cfgStyle(c, true)}>{c.label}</th>))}
+                {shown.map((pk) => shownSub.map((sub, i) => (<th key={pk + sub.key} className={i === 0 ? "eo-mstart" : ""}>{sub.label}</th>)))}
               </tr>
             </thead>
             <tbody>
-              <tr className="eo-section">
-                <td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>
-                  EFFORT — activities &amp; output the team produces
-                </td>
-              </tr>
+              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>EFFORT — activities &amp; output the team produces</td></tr>
               {renderRows("effort")}
-              {canEdit && (
-                <tr className="eo-addrow">
-                  <td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>
-                    <button className="linkbtn" onClick={() => addRow("effort")}>＋ Add effort metric</button>
-                  </td>
-                </tr>
-              )}
-              <tr className="eo-section">
-                <td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>
-                  OUTCOME — results &amp; impact those activities drive
-                </td>
-              </tr>
+              {canEdit && (<tr className="eo-addrow"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><button className="linkbtn" onClick={() => addRow("effort")}>＋ Add effort metric</button></td></tr>)}
+              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>OUTCOME — results &amp; impact those activities drive</td></tr>
               {renderRows("outcome")}
-              {canEdit && (
-                <tr className="eo-addrow">
-                  <td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>
-                    <button className="linkbtn" onClick={() => addRow("outcome")}>＋ Add outcome metric</button>
-                  </td>
-                </tr>
-              )}
+              {canEdit && (<tr className="eo-addrow"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><button className="linkbtn" onClick={() => addRow("outcome")}>＋ Add outcome metric</button></td></tr>)}
             </tbody>
           </table>
         </div>
       )}
       <div className="sub" style={{ marginTop: 10 }}>
-        Editable cells: Base Target, Achieved, and the first month's Carried In. Everything else is calculated.
-        Attain % is green ≥ 100%, yellow 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
+        {gran === "week"
+          ? "Weekly entry: Base Target & Achieved per week; Carried In chains from the previous week (and the last week of a month into the first week of the next). The month rolls up from its weeks."
+          : "Editable: Base Target, Achieved, and the first month's Carried In. Months that have weekly data are calculated from their weeks (read-only here). "}
+        Attain % green ≥ 100%, yellow 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
       </div>
     </>
   );
@@ -443,32 +399,24 @@ function ColumnsMenu({ prefs, setPrefs, close }) {
   };
   return (
     <div className="eo-colsmenu" onMouseLeave={close}>
-      <h4>Freeze columns (stay visible when scrolling)</h4>
+      <h4>Freeze columns</h4>
       {CONFIG_COLS.map((c) => (
         <label key={c.key}>
-          <input
-            type="checkbox"
-            checked={pins.has(c.key)}
-            disabled={c.key === "name"}
-            onChange={() => toggle("pins", c.key)}
-          />
-          {c.label}
-          {c.key === "name" ? " (always)" : ""}
+          <input type="checkbox" checked={pins.has(c.key)} disabled={c.key === "name"} onChange={() => toggle("pins", c.key)} />
+          {c.label}{c.key === "name" ? " (always)" : ""}
         </label>
       ))}
       <h4>Show config columns</h4>
       {CONFIG_COLS.filter((c) => c.key !== "name").map((c) => (
         <label key={c.key}>
-          <input type="checkbox" checked={!hiddenCfg.has(c.key)} onChange={() => toggle("hiddenCfg", c.key)} />
-          {c.label}
+          <input type="checkbox" checked={!hiddenCfg.has(c.key)} onChange={() => toggle("hiddenCfg", c.key)} />{c.label}
         </label>
       ))}
-      <h4>Show month columns</h4>
-      <div className="hint">These are calculation columns — you can hide them, but they're never deleted so the carry-forward math stays intact.</div>
+      <h4>Show period columns</h4>
+      <div className="hint">Calculation columns — hide-only (never deleted), so the carry-forward math stays intact.</div>
       {SUB_COLS.map((s) => (
         <label key={s.key}>
-          <input type="checkbox" checked={!hiddenSub.has(s.key)} onChange={() => toggle("hiddenSub", s.key)} />
-          {s.label}
+          <input type="checkbox" checked={!hiddenSub.has(s.key)} onChange={() => toggle("hiddenSub", s.key)} />{s.label}
         </label>
       ))}
     </div>

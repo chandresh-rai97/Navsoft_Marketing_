@@ -934,32 +934,126 @@ export function AppDataProvider({ children }) {
     },
     [refresh]
   );
-  const eoAddMonth = useCallback(
-    async (projectId, month) => {
-      await upsertRow("eo_months", { project_id: projectId, month }, "project_id,month");
+  // Add a period column (month 'YYYY-MM' or week 'YYYY-MM-W#').
+  const eoAddPeriod = useCallback(
+    async (projectId, period, granularity = "month") => {
+      await upsertRow("eo_months", { project_id: projectId, month: period, granularity }, "project_id,month");
       await refresh();
     },
     [refresh]
   );
-  const eoDeleteMonth = useCallback(
-    async (projectId, month) => {
-      await supabase.from("eo_entries").delete().eq("project_id", projectId).eq("month", month);
-      await supabase.from("eo_months").delete().eq("project_id", projectId).eq("month", month);
+  const eoDeletePeriod = useCallback(
+    async (projectId, period) => {
+      await supabase.from("eo_entries").delete().eq("project_id", projectId).eq("month", period);
+      await supabase.from("eo_months").delete().eq("project_id", projectId).eq("month", period);
       await refresh();
     },
     [refresh]
   );
-  // Upsert one metric×month cell (only the given field(s); other cells untouched).
+  // Upsert one metric×period cell (only the given field(s); other cells untouched).
   const eoSaveEntry = useCallback(
-    async (projectId, metricId, month, patch) => {
+    async (projectId, metricId, period, patch, granularity = "month") => {
       await upsertRow(
         "eo_entries",
-        { project_id: projectId, metric_id: metricId, month, ...patch },
+        { project_id: projectId, metric_id: metricId, month: period, granularity, ...patch },
         "metric_id,month"
       );
       await refresh();
     },
     [refresh]
+  );
+
+  // CSV import → fill metric data. Rows: Channel, Section, Metric, Unit,
+  // Direction, Carry?, Period, Base Target, Achieved. Matches/creates metrics
+  // and writes only Base Target / Achieved (never the calculated columns).
+  const importEoData = useCallback(
+    async (rows) => {
+      const summary = { created: 0, updated: 0, skipped: [] };
+      const val = (o, name) => {
+        const t = name.replace(/\s+/g, "").toLowerCase();
+        const k = Object.keys(o).find((x) => x.replace(/\s+/g, "").toLowerCase() === t);
+        return k ? (o[k] ?? "").toString().trim() : "";
+      };
+      const parsePeriod = (raw) => {
+        // "Aug 2026" -> '2026-08'; "Aug 2026 Week 1" / "(Week 1)" -> '2026-08-W1'
+        const s = raw.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+        const wm = s.match(/week\s*(\d+)/i);
+        const week = wm ? Number(wm[1]) : null;
+        const base = s.replace(/week\s*\d+/i, "").trim();
+        const d = new Date(base + " 1");
+        if (Number.isNaN(d.getTime())) return null;
+        const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return week ? { period: `${mk}-W${week}`, granularity: "week", month: mk } : { period: mk, granularity: "month", month: mk };
+      };
+      // work on fresh data as we may create metrics/months mid-run
+      let cur = db;
+      const reload = async () => {
+        cur = await loadAll();
+      };
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const line = i + 2;
+        const skip = (reason) => summary.skipped.push({ row: line, reason });
+        const chName = val(r, "Channel");
+        const sectionRaw = val(r, "Section").toLowerCase();
+        const metricName = val(r, "Metric");
+        const unit = val(r, "Unit");
+        const dirRaw = val(r, "Direction").toLowerCase();
+        const carryRaw = val(r, "Carry?").toLowerCase();
+        const periodRaw = val(r, "Period");
+        const baseRaw = val(r, "Base Target");
+        const achRaw = val(r, "Achieved");
+
+        const project = cur.projects.find((p) => (p.name || "").trim().toLowerCase() === chName.toLowerCase());
+        if (!chName) { skip("Channel is blank"); continue; }
+        if (!project) { skip(`Channel "${chName}" was not found (must be one of the four channels)`); continue; }
+        if (!metricName) { skip("Metric is blank"); continue; }
+        const section = sectionRaw === "effort" ? "effort" : sectionRaw === "outcome" ? "outcome" : null;
+        if (!section) { skip(`Section "${sectionRaw}" must be Effort or Outcome`); continue; }
+        const per = parsePeriod(periodRaw);
+        if (!per) { skip(`Period "${periodRaw}" is not a month ("Aug 2026") or week ("Aug 2026 Week 1")`); continue; }
+        const baseNum = baseRaw === "" ? null : Number(baseRaw);
+        const achNum = achRaw === "" ? null : Number(achRaw);
+        if (baseRaw !== "" && Number.isNaN(baseNum)) { skip(`Base Target "${baseRaw}" is not a number`); continue; }
+        if (achRaw !== "" && Number.isNaN(achNum)) { skip(`Achieved "${achRaw}" is not a number`); continue; }
+
+        // find or create the metric (match by channel + section + name)
+        let metric = cur.eoMetrics.find(
+          (m) => m.project_id === project.id && m.section === section && (m.name || "").trim().toLowerCase() === metricName.toLowerCase()
+        );
+        try {
+          if (!metric) {
+            const direction = dirRaw === "lower" ? "lower" : "higher";
+            const carry = !(carryRaw === "no" || carryRaw === "n" || carryRaw === "false");
+            const pos = cur.eoMetrics.filter((m) => m.project_id === project.id && m.section === section).length;
+            await insertRow("eo_metrics", { project_id: project.id, section, name: metricName, unit, direction, carry, position: pos });
+            await reload();
+            metric = cur.eoMetrics.find(
+              (m) => m.project_id === project.id && m.section === section && (m.name || "").trim().toLowerCase() === metricName.toLowerCase()
+            );
+          }
+          if (!metric) { skip("couldn't create the metric"); continue; }
+
+          // ensure the period column exists
+          if (!cur.eoMonths.some((mm) => mm.project_id === project.id && mm.month === per.period)) {
+            await upsertRow("eo_months", { project_id: project.id, month: per.period, granularity: per.granularity }, "project_id,month");
+          }
+          const existed = cur.eoEntries.some((e) => e.metric_id === metric.id && e.month === per.period);
+          const patch = { project_id: project.id, metric_id: metric.id, month: per.period, granularity: per.granularity };
+          if (baseRaw !== "") patch.base_target = baseNum;
+          if (achRaw !== "") patch.achieved = achNum;
+          await upsertRow("eo_entries", patch, "metric_id,month");
+          existed ? summary.updated++ : summary.created++;
+          await reload();
+        } catch (e) {
+          const m = e?.message || String(e);
+          skip(/row-level security/i.test(m) ? "you don't have permission for this channel" : m);
+        }
+      }
+      await refresh();
+      return summary;
+    },
+    [db, refresh]
   );
 
   // =========================================================================
@@ -1201,9 +1295,10 @@ export function AppDataProvider({ children }) {
     eoAddMetric,
     eoUpdateMetric,
     eoDeleteMetric,
-    eoAddMonth,
-    eoDeleteMonth,
+    eoAddPeriod,
+    eoDeletePeriod,
     eoSaveEntry,
+    importEoData,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

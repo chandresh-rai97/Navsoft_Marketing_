@@ -38,6 +38,24 @@ export function monthRange(fromKey, toKey) {
   return out;
 }
 
+// ---- week period helpers (key 'YYYY-MM-W#', # is 1..N within a month) ----
+export function weekMonth(key) {
+  return key.slice(0, 7); // '2026-08-W3' -> '2026-08'
+}
+export function weekNum(key) {
+  const m = key.match(/-W(\d+)$/);
+  return m ? Number(m[1]) : 0;
+}
+export function makeWeekKey(month, n) {
+  return `${month}-W${n}`;
+}
+export function weekLabel(key) {
+  return `${monthLabel(weekMonth(key))} (Week ${weekNum(key)})`;
+}
+export function isWeekKey(key) {
+  return /-W\d+$/.test(key);
+}
+
 const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 // Compute every cell for a channel. `monthsSorted` is the FULL ordered month
@@ -70,6 +88,95 @@ export function computeChannel(metrics, monthsSorted, entries) {
     });
   }
   return cells;
+}
+
+// Full compute with weekly source-of-truth + monthly rollup.
+//   months: sorted month keys · weeks: sorted week keys · entries: all eo_entries
+//   for the channel (each has .granularity 'month'|'week' and .month = period key).
+// Returns { monthCells, weekCells } shaped like computeChannel's cells, where a
+// month WITH weeks derives base/achieved (SUM for Carry?=Yes, AVERAGE for
+// Carry?=No), carriedIn from the prior month, and toCarry from its last week.
+export function computeChannelV2(metrics, months, weeks, entries) {
+  const monthEnt = {}; // metricId -> monthKey -> entry
+  const weekEnt = {}; //  metricId -> weekKey  -> entry
+  for (const e of entries) {
+    if (e.granularity === "week") (weekEnt[e.metric_id] = weekEnt[e.metric_id] || {})[e.month] = e;
+    else (monthEnt[e.metric_id] = monthEnt[e.metric_id] || {})[e.month] = e;
+  }
+  const weeksByMonth = {};
+  for (const w of weeks) (weeksByMonth[weekMonth(w)] = weeksByMonth[weekMonth(w)] || []).push(w);
+  Object.values(weeksByMonth).forEach((a) => a.sort((x, y) => weekNum(x) - weekNum(y)));
+
+  const ratio = (dir, total, achieved) => {
+    if (achieved === null) return null;
+    return dir === "higher" ? (total === 0 ? null : achieved / total) : achieved === 0 ? null : total / achieved;
+  };
+
+  const monthCells = {};
+  const weekCells = {};
+  for (const m of metrics) {
+    monthCells[m.id] = {};
+    weekCells[m.id] = {};
+    let prevMonthToCarry = 0;
+    months.forEach((mk, i) => {
+      const openingEntry = monthEnt[m.id]?.[mk] || {};
+      const monthCarriedIn = i === 0 ? num(openingEntry.carried_in) ?? 0 : prevMonthToCarry;
+      const wkeys = weeksByMonth[mk] || [];
+      let monthBase, monthAchieved, monthToCarry;
+
+      if (wkeys.length) {
+        // week mode: chain the weeks, seeded by the month's Carried In
+        let prevWeekToCarry = monthCarriedIn;
+        const baseVals = [];
+        const achVals = [];
+        let baseSum = 0;
+        let achSum = 0;
+        let anyAch = false;
+        wkeys.forEach((wk, j) => {
+          const we = weekEnt[m.id]?.[wk] || {};
+          const wBase = num(we.base_target);
+          const wAch = num(we.achieved);
+          const wCarriedIn = prevWeekToCarry;
+          const wTotal = (wBase ?? 0) + wCarriedIn;
+          const wAttain = ratio(m.direction, wTotal, wAch);
+          const wToCarry = m.carry && wAch !== null ? Math.max(wTotal - wAch, 0) : 0;
+          weekCells[m.id][wk] = {
+            base: wBase, carriedIn: wCarriedIn, total: wTotal, achieved: wAch,
+            attain: wAttain, toCarry: wToCarry, firstOfChannel: i === 0 && j === 0, month: mk, entry: we,
+          };
+          prevWeekToCarry = wToCarry;
+          baseSum += wBase ?? 0;
+          if (wBase !== null) baseVals.push(wBase);
+          if (wAch !== null) { achSum += wAch; anyAch = true; achVals.push(wAch); }
+        });
+        if (m.carry) {
+          // volume metric → SUM
+          monthBase = baseSum;
+          monthAchieved = anyAch ? achSum : null;
+        } else {
+          // rate metric → AVERAGE of the entered weeks
+          monthBase = baseVals.length ? baseVals.reduce((a, b) => a + b, 0) / baseVals.length : null;
+          monthAchieved = achVals.length ? achVals.reduce((a, b) => a + b, 0) / achVals.length : null;
+        }
+        monthToCarry = prevWeekToCarry; // last week's To Carry
+      } else {
+        // month mode: entered directly
+        monthBase = num(openingEntry.base_target);
+        monthAchieved = num(openingEntry.achieved);
+        const tot = (monthBase ?? 0) + monthCarriedIn;
+        monthToCarry = m.carry && monthAchieved !== null ? Math.max(tot - monthAchieved, 0) : 0;
+      }
+
+      const monthTotal = (monthBase ?? 0) + monthCarriedIn;
+      monthCells[m.id][mk] = {
+        base: monthBase, carriedIn: monthCarriedIn, total: monthTotal, achieved: monthAchieved,
+        attain: ratio(m.direction, monthTotal, monthAchieved), toCarry: monthToCarry,
+        firstMonth: i === 0, hasWeeks: wkeys.length > 0, entry: openingEntry,
+      };
+      prevMonthToCarry = monthToCarry;
+    });
+  }
+  return { monthCells, weekCells };
 }
 
 // Traffic-light class for an attainment ratio: >=1 green, 0.8–<1 yellow, <0.8 red.

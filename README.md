@@ -60,7 +60,8 @@ Run **every file in `supabase/migrations/` in numeric order** (0001 → 0006), t
 10. `0010_review_routing_assigned_by.sql` — DB-enforced approval routing (member→project manager, manager→admin) + `assigned_by_user_id`.
 11. `0011_efforts_outcome.sql` — "Efforts vs Outcome" tracker (eo_metrics / eo_months / eo_entries + RLS scoped like managers).
 12. `0012_eo_four_channels.sql` — limit Efforts vs Outcome to the four channels (Email Marketing, SEO, Performance Marketing, Social Media) + cleanup.
-13. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
+13. `0013_eo_weekly.sql` — week-wise tracking (adds `granularity` so a period can be a month or a week).
+14. `supabase/seed.sql` — *(optional demo)* six sign-in-able accounts and a full sample dataset.
 
 *(Optional: `supabase/eo_seed.sql` loads the marketing template's exact metric rows for projects named Social Media / Email Marketing / SEO / Performance Marketing, plus Social Media sample data.)*
 

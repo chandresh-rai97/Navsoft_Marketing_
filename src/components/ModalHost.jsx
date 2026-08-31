@@ -10,6 +10,7 @@ import KRModal from "./modals/KRModal.jsx";
 import ScoreModal from "./modals/ScoreModal.jsx";
 import ImportTasksModal from "./modals/ImportTasksModal.jsx";
 import EoRowsModal from "./modals/EoRowsModal.jsx";
+import ImportEoModal from "./modals/ImportEoModal.jsx";
 
 const ModalCtx = createContext(null);
 export const useModals = () => useContext(ModalCtx);
@@ -31,6 +32,7 @@ export function ModalHost({ children }) {
       openScore: (krId) => setM({ t: "score", krId }),
       openImport: () => setM({ t: "import" }),
       openEoRows: (projectId) => setM({ t: "eorows", projectId }),
+      openEoImport: () => setM({ t: "eoimport" }),
       close: () => setM(null),
     }),
     []
@@ -50,6 +52,7 @@ export function ModalHost({ children }) {
       {m?.t === "score" && <ScoreModal krId={m.krId} onClose={api.close} />}
       {m?.t === "import" && <ImportTasksModal onClose={api.close} />}
       {m?.t === "eorows" && <EoRowsModal projectId={m.projectId} onClose={api.close} />}
+      {m?.t === "eoimport" && <ImportEoModal onClose={api.close} />}
     </ModalCtx.Provider>
   );
 }
