@@ -28,6 +28,10 @@ delete from public.eo_months m
 update public.eo_months set month = '2026' || substring(month from 5) where month like '2001-%';
 
 -- Report what remains (should show 2026 periods, no 2001).
-select 'eo_months' as tbl, month from public.eo_months where month like '20%' order by month
-union all
-select 'eo_entries', month from public.eo_entries where month like '20%' order by month;
+select x.tbl, x.month
+from (
+  select 'eo_months'::text as tbl, month from public.eo_months  where month like '20%'
+  union all
+  select 'eo_entries'::text as tbl, month from public.eo_entries where month like '20%'
+) x
+order by x.tbl, x.month;
