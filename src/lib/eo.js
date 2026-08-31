@@ -56,6 +56,40 @@ export function isWeekKey(key) {
   return /-W\d+$/.test(key);
 }
 
+// Deterministic period parser for the CSV import — NEVER uses new Date() (whose
+// non-ISO parsing is engine-dependent and mangled the year). Accepts a month
+// name + 4-digit year ("Aug 2026" / "August 2026"), ISO ("2026-08"), and the
+// weekly variant ("Aug 2026 Week 1" / "(Week 1)"). Requires an explicit 4-digit
+// year — it never defaults or guesses one. Returns null if it can't parse.
+const EO_MONTHS = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
+  january: 1, february: 2, march: 3, april: 4, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+};
+export function parseEoPeriod(raw) {
+  const s = String(raw || "").replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+  const wm = s.match(/week\s*(\d+)/i);
+  const week = wm ? Number(wm[1]) : null;
+  const base = s.replace(/week\s*\d+/i, "").trim();
+  let mk = null;
+  let m = base.match(/^(\d{4})[-/](\d{1,2})$/); // ISO 2026-08 or 2026/8
+  if (m) {
+    const mo = Number(m[2]);
+    if (mo >= 1 && mo <= 12) mk = `${m[1]}-${String(mo).padStart(2, "0")}`;
+  } else if ((m = base.match(/^([A-Za-z]+)\.?\s+(\d{4})$/))) {
+    // "Aug 2026" / "August 2026"
+    const mo = EO_MONTHS[m[1].toLowerCase()];
+    if (mo) mk = `${m[2]}-${String(mo).padStart(2, "0")}`;
+  } else if ((m = base.match(/^(\d{4})\s+([A-Za-z]+)\.?$/))) {
+    // "2026 Aug"
+    const mo = EO_MONTHS[m[2].toLowerCase()];
+    if (mo) mk = `${m[1]}-${String(mo).padStart(2, "0")}`;
+  }
+  if (!mk) return null;
+  return week
+    ? { period: `${mk}-W${week}`, granularity: "week", month: mk }
+    : { period: mk, granularity: "month", month: mk };
+}
+
 const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
 
 // Compute every cell for a channel. `monthsSorted` is the FULL ordered month

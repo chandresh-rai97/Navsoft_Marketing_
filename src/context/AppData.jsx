@@ -17,6 +17,7 @@ import {
   runCarrySweep,
 } from "../lib/db.js";
 import { todayStr, shiftStr, nowIso, isoWeek, nextOccurrence } from "../lib/format.js";
+import { parseEoPeriod } from "../lib/eo.js";
 import {
   OPEN_STATUSES,
   MOVE_REASON_AFTER,
@@ -974,17 +975,7 @@ export function AppDataProvider({ children }) {
         const k = Object.keys(o).find((x) => x.replace(/\s+/g, "").toLowerCase() === t);
         return k ? (o[k] ?? "").toString().trim() : "";
       };
-      const parsePeriod = (raw) => {
-        // "Aug 2026" -> '2026-08'; "Aug 2026 Week 1" / "(Week 1)" -> '2026-08-W1'
-        const s = raw.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
-        const wm = s.match(/week\s*(\d+)/i);
-        const week = wm ? Number(wm[1]) : null;
-        const base = s.replace(/week\s*\d+/i, "").trim();
-        const d = new Date(base + " 1");
-        if (Number.isNaN(d.getTime())) return null;
-        const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        return week ? { period: `${mk}-W${week}`, granularity: "week", month: mk } : { period: mk, granularity: "month", month: mk };
-      };
+      const parsePeriod = parseEoPeriod; // deterministic month-name + 4-digit-year parser
       // work on fresh data as we may create metrics/months mid-run
       let cur = db;
       const reload = async () => {
