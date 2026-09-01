@@ -213,13 +213,9 @@ function ChannelView({ projectId, canEdit }) {
   const labelOf = gran === "week" ? weekLabel : monthLabel;
   const monthHasWeeks = (mk) => allWeeks.some((w) => weekMonth(w) === mk);
 
-  const [from, setFrom] = useState(periods[0]);
-  const [to, setTo] = useState(periods[periods.length - 1]);
-  useEffect(() => {
-    setFrom(periods[0]);
-    setTo(periods[periods.length - 1]);
-  }, [projectId, gran, periods.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  const shown = periods.filter((m) => m >= from && m <= to);
+  // Show every period; the current/newest is scrolled into view and you scroll
+  // left for older ones — no range picker.
+  const shown = periods;
 
   const [prefs, setPrefs] = useColPrefs(projectId);
   const [showCols, setShowCols] = useState(false);
@@ -284,13 +280,14 @@ function ChannelView({ projectId, canEdit }) {
     if (await dlg.confirm(`Remove ${what} for this channel? Its values are deleted (this is safe — other periods are unaffected).`))
       eoDeletePeriod(projectId, pk);
   }
-  const addPrevMonth = () => { const prev = monthAdd(allMonths[0], -1); eoAddPeriod(projectId, prev, "month").then(() => setFrom(prev)); };
-  const addNextMonth = () => { const next = monthAdd(allMonths[allMonths.length - 1], 1); eoAddPeriod(projectId, next, "month").then(() => setTo(next)); };
+  // The one month control: add the next month as a new column (its Carried In
+  // links to the previous month's To Carry automatically via the compute).
+  const addMonth = () => eoAddPeriod(projectId, monthAdd(allMonths[allMonths.length - 1], 1), "month");
   const addWeek = () => {
     const mk = wkMonth || allMonths[allMonths.length - 1];
     const existing = allWeeks.filter((w) => weekMonth(w) === mk).map(weekNum);
     const n = (existing.length ? Math.max(...existing) : 0) + 1;
-    eoAddPeriod(projectId, makeWeekKey(mk, n), "week").then(() => setTo(makeWeekKey(mk, n)));
+    eoAddPeriod(projectId, makeWeekKey(mk, n), "week");
   };
 
   const renderRows = (section) =>
@@ -311,13 +308,10 @@ function ChannelView({ projectId, canEdit }) {
 
   return (
     <>
-      <div className="filters" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div className="seg">
-            <button className={gran === "month" ? "on" : ""} onClick={() => setGran("month")}>Month</button>
-            <button className={gran === "week" ? "on" : ""} onClick={() => setGran("week")}>Week</button>
-          </div>
-          {periods.length > 0 && <PeriodFilter periods={periods} from={from} to={to} setFrom={setFrom} setTo={setTo} label={labelOf} />}
+      <div className="filters" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div className="seg">
+          <button className={gran === "month" ? "on" : ""} onClick={() => setGran("month")}>Month</button>
+          <button className={gran === "week" ? "on" : ""} onClick={() => setGran("week")}>Week</button>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div className="eo-cols">
@@ -325,21 +319,18 @@ function ChannelView({ projectId, canEdit }) {
             {showCols && <ColumnsMenu prefs={prefs} setPrefs={setPrefs} close={() => setShowCols(false)} />}
           </div>
           {canEdit && gran === "month" && (
-            <>
-              <button className="btn sm ghost" onClick={addPrevMonth}>+ Prev month</button>
-              <button className="btn sm ghost" onClick={addNextMonth}>+ Next month</button>
-            </>
+            <button className="btn sm" onClick={addMonth}>+ Add month</button>
           )}
           {canEdit && gran === "week" && (
             <>
               <select value={wkMonth || allMonths[allMonths.length - 1]} onChange={(e) => setWkMonth(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7 }}>
                 {allMonths.map((mk) => (<option key={mk} value={mk}>{monthLabel(mk)}</option>))}
               </select>
-              <button className="btn sm ghost" onClick={addWeek}>+ Add week</button>
+              <button className="btn sm" onClick={addWeek}>+ Add week</button>
             </>
           )}
           {canEdit && <button className="btn sm ghost" onClick={() => modals.openEoImport()}>Import data</button>}
-          {canEdit && <button className="btn sm" onClick={() => modals.openEoRows(projectId)}>✏️ Manage rows</button>}
+          {canEdit && <button className="btn sm ghost" onClick={() => modals.openEoRows(projectId)}>✏️ Manage rows</button>}
         </div>
       </div>
 

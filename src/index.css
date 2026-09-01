@@ -200,6 +200,10 @@ tr.clk:hover td { background: var(--paper-2); }
 .eo-table th, .eo-table td { padding: 7px 10px; }
 .eo-table tbody tr:hover td:not(.eo-sticky):not(.eo-green):not(.eo-yellow):not(.eo-red) { background: #faf9f6; }
 .eo-num { text-align: right; font-family: var(--mono); }
+/* Consistent width for the six month sub-columns so everything lines up. */
+.eo-table td:not(.eo-sticky), .eo-table th:not(.eo-sticky):not(.eo-monthhead) { min-width: 86px; }
+.eo-table .eo-in { width: 100%; }
+.eo-monthhead { padding: 8px 10px; }
 .eo-mstart { border-left: 2px solid var(--muted-2) !important; }
 .eo-xbtn { cursor: pointer; color: var(--muted-2); font-weight: 700; margin-left: 6px; font-size: 12px; }
 .eo-xbtn:hover { color: var(--red); }
