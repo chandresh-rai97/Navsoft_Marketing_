@@ -220,9 +220,23 @@ function ChannelView({ projectId, canEdit }) {
   const [prefs, setPrefs] = useColPrefs(projectId);
   const [showCols, setShowCols] = useState(false);
   const [wkMonth, setWkMonth] = useState("");
+  // Which month the "+ Add month" picker will add. Blank => default to the
+  // month just before the earliest column, so the common case (backfill an
+  // older month like the previous one) is a single click. The user can pick
+  // any month, past or future — what's in the box is exactly what gets added.
+  const [addMk, setAddMk] = useState("");
+  const addValue = /^\d{4}-\d{2}$/.test(addMk) ? addMk : monthAdd(allMonths[0], -1);
 
   const wrapRef = useRef(null);
-  useEffect(() => { if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth; }, [shown.length, gran]);
+  // After adding a month, reveal it: scroll left when it's an older (backfilled)
+  // month, right when it's the newest; otherwise keep the newest in view.
+  const scrollTargetRef = useRef("end");
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    el.scrollLeft = scrollTargetRef.current === "start" ? 0 : el.scrollWidth;
+    scrollTargetRef.current = "end";
+  }, [shown.length, gran]);
 
   const pins = new Set([...(prefs.pins || []), "name"]);
   const hiddenCfg = new Set((prefs.hiddenCfg || []).filter((k) => k !== "name"));
@@ -280,9 +294,14 @@ function ChannelView({ projectId, canEdit }) {
     if (await dlg.confirm(`Remove ${what} for this channel? Its values are deleted (this is safe — other periods are unaffected).`))
       eoDeletePeriod(projectId, pk);
   }
-  // The one month control: add the next month as a new column (its Carried In
-  // links to the previous month's To Carry automatically via the compute).
-  const addMonth = () => eoAddPeriod(projectId, monthAdd(allMonths[allMonths.length - 1], 1), "month");
+  // The one month control: add whichever month the picker shows (past or
+  // future) as a new column. Carried In links to the previous month's To Carry
+  // automatically via the compute; adding an existing month is a harmless no-op.
+  const addMonth = () => {
+    const mk = addValue;
+    scrollTargetRef.current = mk < allMonths[0] ? "start" : "end";
+    eoAddPeriod(projectId, mk, "month");
+  };
   const addWeek = () => {
     const mk = wkMonth || allMonths[allMonths.length - 1];
     const existing = allWeeks.filter((w) => weekMonth(w) === mk).map(weekNum);
@@ -319,7 +338,16 @@ function ChannelView({ projectId, canEdit }) {
             {showCols && <ColumnsMenu prefs={prefs} setPrefs={setPrefs} close={() => setShowCols(false)} />}
           </div>
           {canEdit && gran === "month" && (
-            <button className="btn sm" onClick={addMonth}>+ Add month</button>
+            <span className="eo-addmonth">
+              <input
+                type="month"
+                className="eo-monthpick"
+                value={addValue}
+                onChange={(e) => setAddMk(e.target.value)}
+                title="Pick the month to add (past or future), then click Add month"
+              />
+              <button className="btn sm" onClick={addMonth}>+ Add month</button>
+            </span>
           )}
           {canEdit && gran === "week" && (
             <>

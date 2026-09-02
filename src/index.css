@@ -209,6 +209,8 @@ tr.clk:hover td { background: var(--paper-2); }
 .eo-xbtn:hover { color: var(--red); }
 .eo-addrow td { background: var(--paper); text-align: left; }
 .eo-cols { position: relative; }
+.eo-addmonth { display: inline-flex; align-items: center; gap: 6px; }
+.eo-monthpick { padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; color: var(--ink); background: #fff; }
 .eo-colsmenu { position: absolute; right: 0; top: 32px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,.14); padding: 12px 14px; z-index: 30; width: 270px; max-height: 62vh; overflow: auto; }
 .eo-colsmenu h4 { margin: 8px 0 3px; font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .eo-colsmenu label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0; white-space: normal; }
