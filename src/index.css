@@ -210,6 +210,8 @@ tr.clk:hover td { background: var(--paper-2); }
 .eo-addrow td { background: var(--paper); text-align: left; }
 .eo-cols { position: relative; }
 .eo-addmonth { display: inline-flex; align-items: center; gap: 6px; }
+.eo-wkbadge { cursor: pointer; margin-left: 8px; font-family: var(--sans); font-size: 10px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--amber); background: var(--amber-soft); border-radius: 20px; padding: 1px 8px; white-space: nowrap; }
+.eo-wkbadge:hover { background: var(--amber); color: #fff; }
 .eo-monthpick { padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; color: var(--ink); background: #fff; }
 .eo-colsmenu { position: absolute; right: 0; top: 32px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,.14); padding: 12px 14px; z-index: 30; width: 270px; max-height: 62vh; overflow: auto; }
 .eo-colsmenu h4 { margin: 8px 0 3px; font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }

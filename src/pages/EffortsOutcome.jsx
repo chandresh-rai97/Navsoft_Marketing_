@@ -302,6 +302,19 @@ function ChannelView({ projectId, canEdit }) {
     scrollTargetRef.current = mk < allMonths[0] ? "start" : "end";
     eoAddPeriod(projectId, mk, "month");
   };
+  // A month that has weekly rows is calculated from those weeks, so its monthly
+  // Base Target/Achieved are read-only here. This deletes the month's weekly
+  // breakdown so the month becomes directly editable again (e.g. to clear stray
+  // week rows a CSV import created for a month you want to track monthly).
+  async function switchMonthToDirect(mk) {
+    const wks = allWeeks.filter((w) => weekMonth(w) === mk);
+    if (!wks.length) return;
+    const ok = await dlg.confirm(
+      `“${monthLabel(mk)}” is tracked by week (${wks.length} week${wks.length > 1 ? "s" : ""}), so its monthly Base Target and Achieved are rolled up from those weeks and can't be typed in the month column.\n\nRemove the weekly breakdown for this month so you can enter monthly figures directly? The weekly rows for this month are deleted; other months are unaffected.`
+    );
+    if (!ok) return;
+    for (const w of wks) await eoDeletePeriod(projectId, w);
+  }
   const addWeek = () => {
     const mk = wkMonth || allMonths[allMonths.length - 1];
     const existing = allWeeks.filter((w) => weekMonth(w) === mk).map(weekNum);
@@ -377,6 +390,15 @@ function ChannelView({ projectId, canEdit }) {
                 {shown.map((pk) => (
                   <th key={pk} className="eo-monthhead eo-mstart" colSpan={shownSub.length}>
                     {labelOf(pk)}
+                    {canEdit && gran === "month" && monthHasWeeks(pk) && (
+                      <span
+                        className="eo-wkbadge"
+                        title="Tracked by week — its monthly figures are rolled up from the weeks (read-only here). Click to remove the weekly breakdown and enter monthly figures directly."
+                        onClick={() => switchMonthToDirect(pk)}
+                      >
+                        weekly → enter monthly
+                      </span>
+                    )}
                     {canEdit && <span className="eo-xbtn" title="Remove this period" onClick={() => removePeriod(pk)}>×</span>}
                   </th>
                 ))}
@@ -400,7 +422,7 @@ function ChannelView({ projectId, canEdit }) {
       <div className="sub" style={{ marginTop: 10 }}>
         {gran === "week"
           ? "Weekly entry: Base Target & Achieved per week; Carried In chains from the previous week (and the last week of a month into the first week of the next). The month rolls up from its weeks."
-          : "Editable: Base Target, Achieved, and the first month's Carried In. Months that have weekly data are calculated from their weeks (read-only here). "}
+          : "Editable: Base Target, Achieved, and the first month's Carried In. A month tagged “weekly” is calculated from its weeks (read-only here) — click that tag on the month header to remove the weekly breakdown and type monthly figures directly. "}
         Attain % green ≥ 100%, yellow 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
       </div>
     </>
