@@ -156,15 +156,19 @@ export function computeChannelV2(metrics, months, weeks, entries) {
       const openingEntry = monthEnt[m.id]?.[mk] || {};
       const monthCarriedIn = i === 0 ? num(openingEntry.carried_in) ?? 0 : prevMonthToCarry;
       const wkeys = weeksByMonth[mk] || [];
-      let monthBase, monthAchieved, monthToCarry;
 
+      // Always chain the weeks (so Week view works) and capture their rollup as
+      // the fallback the month uses when no monthly total is typed.
+      let rollupBase = null;
+      let rollupAchieved = null;
+      let rollupToCarry = monthCarriedIn;
       if (wkeys.length) {
-        // week mode: chain the weeks, seeded by the month's Carried In
         let prevWeekToCarry = monthCarriedIn;
         const baseVals = [];
         const achVals = [];
         let baseSum = 0;
         let achSum = 0;
+        let anyBase = false;
         let anyAch = false;
         wkeys.forEach((wk, j) => {
           const we = weekEnt[m.id]?.[wk] || {};
@@ -180,32 +184,39 @@ export function computeChannelV2(metrics, months, weeks, entries) {
           };
           prevWeekToCarry = wToCarry;
           baseSum += wBase ?? 0;
-          if (wBase !== null) baseVals.push(wBase);
+          if (wBase !== null) { anyBase = true; baseVals.push(wBase); }
           if (wAch !== null) { achSum += wAch; anyAch = true; achVals.push(wAch); }
         });
         if (m.carry) {
-          // volume metric → SUM
-          monthBase = baseSum;
-          monthAchieved = anyAch ? achSum : null;
+          rollupBase = anyBase ? baseSum : null; // volume metric → SUM
+          rollupAchieved = anyAch ? achSum : null;
         } else {
           // rate metric → AVERAGE of the entered weeks
-          monthBase = baseVals.length ? baseVals.reduce((a, b) => a + b, 0) / baseVals.length : null;
-          monthAchieved = achVals.length ? achVals.reduce((a, b) => a + b, 0) / achVals.length : null;
+          rollupBase = baseVals.length ? baseVals.reduce((a, b) => a + b, 0) / baseVals.length : null;
+          rollupAchieved = achVals.length ? achVals.reduce((a, b) => a + b, 0) / achVals.length : null;
         }
-        monthToCarry = prevWeekToCarry; // last week's To Carry
-      } else {
-        // month mode: entered directly
-        monthBase = num(openingEntry.base_target);
-        monthAchieved = num(openingEntry.achieved);
-        const tot = (monthBase ?? 0) + monthCarriedIn;
-        monthToCarry = m.carry && monthAchieved !== null ? Math.max(tot - monthAchieved, 0) : 0;
+        rollupToCarry = prevWeekToCarry; // last week's To Carry
       }
 
+      // A typed monthly Base Target / Achieved OVERRIDES the weekly rollup for
+      // that field, so the user can enter data month-wise or week-wise as they
+      // prefer. With no weeks the month is entered directly; with weeks and
+      // nothing typed it reflects the weeks exactly (unchanged behaviour).
+      const typedBase = num(openingEntry.base_target);
+      const typedAch = num(openingEntry.achieved);
+      const anyTyped = typedBase !== null || typedAch !== null;
+      const monthBase = typedBase !== null ? typedBase : rollupBase;
+      const monthAchieved = typedAch !== null ? typedAch : rollupAchieved;
       const monthTotal = (monthBase ?? 0) + monthCarriedIn;
+      const monthToCarry =
+        anyTyped || !wkeys.length
+          ? m.carry && monthAchieved !== null ? Math.max(monthTotal - monthAchieved, 0) : 0
+          : rollupToCarry;
+
       monthCells[m.id][mk] = {
         base: monthBase, carriedIn: monthCarriedIn, total: monthTotal, achieved: monthAchieved,
         attain: ratio(m.direction, monthTotal, monthAchieved), toCarry: monthToCarry,
-        firstMonth: i === 0, hasWeeks: wkeys.length > 0, entry: openingEntry,
+        firstMonth: i === 0, hasWeeks: wkeys.length > 0, overridden: anyTyped, entry: openingEntry,
       };
       prevMonthToCarry = monthToCarry;
     });

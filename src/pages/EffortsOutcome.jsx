@@ -266,15 +266,17 @@ function ChannelView({ projectId, canEdit }) {
       if (sub.key === "attain") return fmtPct(c.attain);
       return <span className="eo-auto eo-num">{c.toCarry ? fmtNum(c.toCarry) : "0"}</span>;
     }
-    const editable = canEdit && !monthHasWeeks(pk);
+    // Base Target & Achieved are always typeable at the month level. A typed
+    // value overrides the weekly rollup; leaving it blank when the month has
+    // weeks keeps the rolled-up figure. So the user chooses month- or week-wise.
     const first = allMonths[0] === pk;
     if (sub.key === "base")
-      return editable ? <EoCell value={c.base} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { base_target: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.base)}</span>;
+      return canEdit ? <EoCell value={c.base} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { base_target: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.base)}</span>;
     if (sub.key === "carried")
       return first ? <EoCell value={c.entry?.carried_in ?? 0} canEdit={canEdit} onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { carried_in: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.carriedIn)}</span>;
     if (sub.key === "total") return <span className="eo-auto eo-num">{fmtNum(c.total)}</span>;
     if (sub.key === "achieved")
-      return editable ? <EoCell value={c.achieved} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { achieved: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.achieved)}</span>;
+      return canEdit ? <EoCell value={c.achieved} canEdit onCommit={(v) => eoSaveEntry(projectId, m.id, pk, { achieved: v }, "month")} /> : <span className="eo-auto eo-num">{fmtNum(c.achieved)}</span>;
     if (sub.key === "attain") return fmtPct(c.attain);
     return <span className="eo-auto eo-num">{c.toCarry ? fmtNum(c.toCarry) : "0"}</span>;
   }
@@ -302,15 +304,14 @@ function ChannelView({ projectId, canEdit }) {
     scrollTargetRef.current = mk < allMonths[0] ? "start" : "end";
     eoAddPeriod(projectId, mk, "month");
   };
-  // A month that has weekly rows is calculated from those weeks, so its monthly
-  // Base Target/Achieved are read-only here. This deletes the month's weekly
-  // breakdown so the month becomes directly editable again (e.g. to clear stray
-  // week rows a CSV import created for a month you want to track monthly).
+  // Optional cleanup: delete a month's weekly entries (e.g. stray week rows a
+  // CSV import created). You can already type monthly totals directly — they
+  // override the rollup — so this is only for removing the weekly breakdown.
   async function switchMonthToDirect(mk) {
     const wks = allWeeks.filter((w) => weekMonth(w) === mk);
     if (!wks.length) return;
     const ok = await dlg.confirm(
-      `“${monthLabel(mk)}” is tracked by week (${wks.length} week${wks.length > 1 ? "s" : ""}), so its monthly Base Target and Achieved are rolled up from those weeks and can't be typed in the month column.\n\nRemove the weekly breakdown for this month so you can enter monthly figures directly? The weekly rows for this month are deleted; other months are unaffected.`
+      `“${monthLabel(mk)}” also has ${wks.length} weekly ${wks.length > 1 ? "entries" : "entry"}. Delete this month's weekly breakdown? Its month figures then come only from what you type in the month column. Other months are unaffected.`
     );
     if (!ok) return;
     for (const w of wks) await eoDeletePeriod(projectId, w);
@@ -393,10 +394,10 @@ function ChannelView({ projectId, canEdit }) {
                     {canEdit && gran === "month" && monthHasWeeks(pk) && (
                       <span
                         className="eo-wkbadge"
-                        title="Tracked by week — its monthly figures are rolled up from the weeks (read-only here). Click to remove the weekly breakdown and enter monthly figures directly."
+                        title="This month also has weekly entries. Month figures roll up from those weeks unless you type a monthly total (which overrides them). Click to delete this month's weekly entries."
                         onClick={() => switchMonthToDirect(pk)}
                       >
-                        weekly → enter monthly
+                        has weekly · clear
                       </span>
                     )}
                     {canEdit && <span className="eo-xbtn" title="Remove this period" onClick={() => removePeriod(pk)}>×</span>}
@@ -422,7 +423,7 @@ function ChannelView({ projectId, canEdit }) {
       <div className="sub" style={{ marginTop: 10 }}>
         {gran === "week"
           ? "Weekly entry: Base Target & Achieved per week; Carried In chains from the previous week (and the last week of a month into the first week of the next). The month rolls up from its weeks."
-          : "Editable: Base Target, Achieved, and the first month's Carried In. A month tagged “weekly” is calculated from its weeks (read-only here) — click that tag on the month header to remove the weekly breakdown and type monthly figures directly. "}
+          : "You choose: type Base Target & Achieved straight into the month, or switch to Week to enter them per week. A typed monthly value overrides the weekly rollup; leave it blank and the month fills in from its weeks. The first month's Carried In is also editable. "}
         Attain % green ≥ 100%, yellow 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
       </div>
     </>
