@@ -1,0 +1,82 @@
+# Weekly encrypted backup of the Supabase database.
+#
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL    Postgres connection string (Session pooler URI).
+#   BACKUP_PASSPHRASE  Passphrase the dump is encrypted with. The repo is public,
+#                      so the dump is never uploaded unencrypted.
+#
+# Output: an artifact named supabase-backup-<UTC timestamp> holding
+# supabase-backup-<timestamp>.tar.gz.gpg (roles.sql, schema.sql, data.sql), kept 90 days.
+# Decrypt: gpg --decrypt supabase-backup-<ts>.tar.gz.gpg | tar -xz
+
+name: Supabase weekly backup
+
+on:
+  schedule:
+    # Sundays 17:30 UTC = Sunday 23:00 IST
+    - cron: "30 17 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check secrets are set
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          [ -n "$SUPABASE_DB_URL" ] || { echo "::error::Secret SUPABASE_DB_URL is not set"; exit 1; }
+          [ -n "$BACKUP_PASSPHRASE" ] || { echo "::error::Secret BACKUP_PASSPHRASE is not set"; exit 1; }
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y-%m-%dT%H%MZ)
+          echo "TS=$TS" >> "$GITHUB_ENV"
+          DIR="$RUNNER_TEMP/dump"
+          mkdir -p "$DIR"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "$DIR/roles.sql" --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "$DIR/schema.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "$DIR/data.sql" --use-copy --data-only
+          ls -l "$DIR"
+          for f in roles schema data; do
+            [ -s "$DIR/$f.sql" ] || { echo "::error::$f.sql is empty"; exit 1; }
+          done
+
+      - name: Encrypt dump
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/out"
+          mkdir -p "$OUT"
+          tar -C "$RUNNER_TEMP/dump" -czf - roles.sql schema.sql data.sql \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --pinentry-mode loopback --passphrase-fd 3 \
+                  --output "$OUT/supabase-backup-$TS.tar.gz.gpg" \
+                  3<<<"$BACKUP_PASSPHRASE"
+          rm -rf "$RUNNER_TEMP/dump"
+          ls -l "$OUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ env.TS }}
+          path: ${{ runner.temp }}/out/supabase-backup-${{ env.TS }}.tar.gz.gpg
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
