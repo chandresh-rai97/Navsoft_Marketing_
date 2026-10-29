@@ -13,6 +13,8 @@
   color-scheme: light;
   /* NavAI palette */
   --navai-blue: #005DE0; --navai-light-blue: #6CB4DD; --navai-orange: #FCAD32; --navai-red: #F3304B;
+  /* brand gradient: only for the 6px strip at the top of pages */
+  --brand-gradient: linear-gradient(90deg, #005DE0 0%, #6CB4DD 33%, #FCAD32 66%, #F3304B 100%);
 
   /* surfaces and text (light) */
   --surface-page: #F8F8F8; --surface-card: #FFFFFF; --surface-raised: #FFFFFF; --surface-input: #FFFFFF;
@@ -26,6 +28,7 @@
   --sidebar-text-muted: rgba(255, 255, 255, .64); --sidebar-line: rgba(255, 255, 255, .14);
   --sidebar-hover: rgba(255, 255, 255, .08); --sidebar-pill: rgba(255, 255, 255, .12);
   --sidebar-pill-active: rgba(16, 16, 16, .32);
+  --sidebar-scroll-thumb: rgba(255, 255, 255, .18);
 
   /* accent: buttons, active nav, selected tabs/filters, links, focus */
   --accent: var(--navai-blue);
@@ -87,7 +90,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 select, textarea, input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]) { background-color: var(--surface-input); color: var(--text-head); }
 
 /* login */
-.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--sidebar-bg); padding: 20px; }
+.login-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--sidebar-bg); padding: 20px; position: relative; }
+.login-wrap::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--brand-gradient); }
 .login-card { background: var(--surface-card); padding: 34px 30px; border-radius: 14px; width: 380px; max-width: 92vw; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .login-card h1 { color: var(--text-head); font-size: 21px; margin: 6px 0 20px; letter-spacing: -.01em; }
@@ -112,8 +116,18 @@ select, textarea, input:not([type=checkbox]):not([type=radio]):not([type=range])
 .sample-box code { font-family: var(--mono); color: var(--ink); }
 
 /* app shell */
-.app { display: flex; min-height: 100vh; }
+.app { display: flex; min-height: 100vh; position: relative; }
+/* Brand strip across the top of the main content area (right of the sidebar). */
+.app::before { content: ""; position: absolute; top: 0; left: 230px; right: 0; height: 6px; background: var(--brand-gradient); z-index: 1; }
 .side { width: 230px; flex-shrink: 0; background: var(--sidebar-bg); color: var(--sidebar-text-soft); padding: 20px 16px; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+/* NavAI logo (white lettering: sits on the dark sidebar / login background in both themes). */
+.brand-logo { display: block; height: 26px; width: auto; max-width: 100%; object-fit: contain; align-self: flex-start; margin-bottom: 12px; }
+.login-logo { align-self: center; margin-bottom: 18px; }
+/* Thin dark scrollbar that blends into the sidebar. */
+.side { scrollbar-width: thin; scrollbar-color: var(--sidebar-scroll-thumb) transparent; }
+.side::-webkit-scrollbar { width: 6px; }
+.side::-webkit-scrollbar-track { background: transparent; }
+.side::-webkit-scrollbar-thumb { background: var(--sidebar-scroll-thumb); border-radius: 6px; }
 .brand { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--sidebar-text-muted); margin-bottom: 16px; }
 .brand strong { display: block; font-family: var(--sans); font-size: 20px; letter-spacing: -.01em; color: var(--sidebar-text); margin-top: 3px; font-weight: 800; }
 .nav-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--sidebar-text-muted); margin: 14px 0 4px 6px; }
@@ -149,7 +163,7 @@ h1.page { color: var(--text-head); font-size: 22px; margin: 0; font-weight: 800;
 .panel h2 { font-size: 14px; margin: 0 0 12px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .panel h2 .muted-lbl { font-family: var(--mono); font-size: 10.5px; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .side { width: 200px; } }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } .side { width: 200px; } .app::before { left: 200px; } }
 
 .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 .filters select, .filters input { padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; font-size: 12.5px; background: var(--surface-input); color: var(--ink); }

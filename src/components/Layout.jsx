@@ -103,6 +103,7 @@ export default function Layout({ view, navigate, children }) {
   return (
     <div className="app">
       <nav className="side">
+        <img className="brand-logo" src="/brand/navai-lockup-light.png" alt="NavAI" />
         <div className="brand">
           Cadence
           <strong>Task Tracker</strong>

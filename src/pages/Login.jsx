@@ -42,6 +42,7 @@ export default function Login() {
 
   return (
     <div className="login-wrap">
+      <img className="brand-logo login-logo" src="/brand/navai-lockup-light.png" alt="NavAI" />
       <div className="login-card">
         <div className="eyebrow">Cadence</div>
         <h1>OKR &amp; Daily Task Tracker</h1>
