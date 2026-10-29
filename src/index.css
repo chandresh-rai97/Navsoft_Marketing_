@@ -218,3 +218,37 @@ tr.clk:hover td { background: var(--paper-2); }
 .eo-colsmenu label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0; white-space: normal; }
 .eo-colsmenu label input { width: auto; }
 .eo-colsmenu .hint { margin: 2px 0 6px; }
+
+/* Campaigns (Instantly) tab */
+.ix-updated { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); text-align: right; }
+.ix-refresh { display: inline-flex; align-items: center; justify-content: center; padding: 6px 8px; }
+.ix-spin { animation: ix-spin 0.9s linear infinite; }
+@keyframes ix-spin { to { transform: rotate(360deg); } }
+.ix .sub b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ix-bar { display: flex; flex-direction: column; gap: 10px; }
+.ix-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ix-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.ix-date { display: inline-flex; align-items: center; gap: 5px; }
+.ix-date input { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; font-size: 12.5px; font-family: var(--sans); background: #fff; color: var(--ink); }
+.ix-sec { margin-bottom: 18px; }
+.ix .grid2 > * { min-width: 0; }
+.ix-sec > h2 { font-size: 15px; font-weight: 700; margin: 0 0 3px; }
+.ix-sec > p { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.ix-kpis { margin-bottom: 0; }
+.ix-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.ix-note, .ix-empty { font-size: 12px; color: var(--muted); margin: -6px 0 10px; }
+.ix-empty { margin: 10px 0 0; }
+.ix-scroll { overflow-x: auto; }
+.ix-table .num { text-align: right; white-space: nowrap; font-family: var(--mono); }
+.ix-table td { vertical-align: middle; }
+.ix-table td.ix-name { min-width: 10rem; overflow-wrap: anywhere; }
+.ix .ix-red, .ix-red { color: var(--red); }
+.ix-del { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; background: var(--paper-2); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+.ix-chart { position: relative; min-height: 220px; }
+.ix-tip { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.12); padding: 5px 9px; font-size: 12px; white-space: nowrap; z-index: 5; }
+.ix-tip .d { color: var(--muted); }
+.ix-live { margin: 0; padding-left: 1.2rem; font-size: 13px; line-height: 1.6; }
+.ix-method { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+.ix-method summary { cursor: pointer; color: var(--ink); font-weight: 700; }
+.ix-method ul { margin: 6px 0 0; padding-left: 1.2rem; }
+@media (max-width: 640px) { .ix-hide { display: none; } }

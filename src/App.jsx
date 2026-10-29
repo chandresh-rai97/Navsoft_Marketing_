@@ -3,6 +3,7 @@ import { useApp } from "./context/AppData.jsx";
 import { NavContext } from "./context/Nav.jsx";
 import Layout from "./components/Layout.jsx";
 import { ModalHost } from "./components/ModalHost.jsx";
+import { canSeeCampaigns } from "./lib/instantly.js";
 
 import Login from "./pages/Login.jsx";
 import MyDay from "./pages/MyDay.jsx";
@@ -19,6 +20,7 @@ import Acceptance from "./pages/Acceptance.jsx";
 import Done from "./pages/Done.jsx";
 import Reviews from "./pages/Reviews.jsx";
 import EffortsOutcome from "./pages/EffortsOutcome.jsx";
+import Campaigns from "./pages/Campaigns.jsx";
 import Settings from "./pages/Settings.jsx";
 
 const ROUTES = {
@@ -36,6 +38,7 @@ const ROUTES = {
   grid: Grid,
   reviews: Reviews,
   efforts: EffortsOutcome,
+  campaigns: Campaigns,
   settings: Settings,
 };
 
@@ -66,7 +69,9 @@ const VIEWER_VIEWS = [
   "blockers",
 ];
 
-function allowedView(role, view) {
+// Campaigns is open to admins, viewers and the Email Marketing project lead.
+function allowedView(role, view, campaigns) {
+  if (view === "campaigns") return campaigns ? view : allowedView(role, null, false);
   if (role === "member") return MEMBER_VIEWS.includes(view) ? view : "myday";
   if (role === "manager") return MANAGER_VIEWS.includes(view) ? view : "dashboard";
   if (role === "viewer") return VIEWER_VIEWS.includes(view) ? view : "dashboard";
@@ -74,7 +79,7 @@ function allowedView(role, view) {
 }
 
 export default function App() {
-  const { authReady, session, me, loadingData } = useApp();
+  const { authReady, session, me, loadingData, db } = useApp();
   const [view, setView] = useState("myday");
   const [arg, setArg] = useState(null);
 
@@ -96,7 +101,7 @@ export default function App() {
     return <div className="loading">Loading your workspace…</div>;
   }
 
-  const safeView = allowedView(me.role, view);
+  const safeView = allowedView(me.role, view, canSeeCampaigns(me, db.projects));
   const Page = ROUTES[safeView] || MyDay;
 
   return (
