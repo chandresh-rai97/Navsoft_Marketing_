@@ -3,6 +3,7 @@ import { useApp } from "../context/AppData.jsx";
 import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
 import { daysSince, todayStr } from "../lib/format.js";
 import { canSeeCampaigns } from "../lib/instantly.js";
+import ThemeSwitch from "./ThemeSwitch.jsx";
 
 const MEMBER_NAV = [
   ["myday", "My Day"],
@@ -129,6 +130,7 @@ export default function Layout({ view, navigate, children }) {
         <div className="whoami">
           <div className="nm">{me.name}</div>
           <div className="rl">{me.role}</div>
+          <ThemeSwitch />
           <button className="btn ghost" onClick={signOut}>
             Log out
           </button>

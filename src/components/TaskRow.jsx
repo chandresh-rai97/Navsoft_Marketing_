@@ -7,7 +7,7 @@ export function ProjectDot({ projectId }) {
   const { P } = useApp();
   const p = P(projectId);
   if (!p) return null;
-  return <span className="dot" style={{ background: p.color || "#999" }} />;
+  return <span className="dot" style={{ background: p.color || "var(--text-subtle)" }} />;
 }
 
 export function StatusTag({ status }) {
@@ -60,7 +60,7 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
         <div className="task-title">{t.title}</div>
         <div className="task-meta">
           <span className="chip">
-            {p && <span className="dot" style={{ background: p.color || "#999" }} />}
+            {p && <span className="dot" style={{ background: p.color || "var(--text-subtle)" }} />}
             {pname(t.project_id)}
           </span>
           <span className="chip" title="Key Result">

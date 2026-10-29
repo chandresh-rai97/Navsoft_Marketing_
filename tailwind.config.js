@@ -1,26 +1,28 @@
 /** @type {import('tailwindcss').Config} */
+// Colours point at the CSS variables in src/index.css, so they follow the
+// light/dark theme.
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
       colors: {
-        ink: "#151a21",
-        "ink-2": "#212934",
-        paper: "#f6f5f1",
-        "paper-2": "#edeae2",
-        card: "#ffffff",
-        line: "#e0ddd4",
-        muted: "#6b7280",
-        "muted-2": "#8b8f98",
-        accent: "#0f7b6c",
-        green: "#0f7b6c",
-        amber: "#c8790f",
-        red: "#b23a3a",
-        blue: "#2f6db3",
-        purple: "#6b4fa3",
+        ink: "var(--ink)",
+        "ink-2": "var(--ink-2)",
+        paper: "var(--paper)",
+        "paper-2": "var(--paper-2)",
+        card: "var(--card)",
+        line: "var(--line)",
+        muted: "var(--muted)",
+        "muted-2": "var(--muted-2)",
+        accent: "var(--accent)",
+        green: "var(--green)",
+        amber: "var(--amber)",
+        red: "var(--red)",
+        blue: "var(--blue)",
+        purple: "var(--purple)",
       },
       fontFamily: {
-        sans: ['"Inter"', '"Helvetica Neue"', "Arial", "sans-serif"],
+        sans: ['"Plus Jakarta Sans"', "-apple-system", '"Segoe UI"', "Helvetica", "Arial", "sans-serif"],
         mono: ['"IBM Plex Mono"', '"SFMono-Regular"', "Consolas", "monospace"],
       },
     },

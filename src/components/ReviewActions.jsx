@@ -50,7 +50,7 @@ export default function ReviewActions({ task, onDone }) {
       </div>
 
       {task.status === "changes_requested" && (
-        <div style={{ fontSize: 12, color: "var(--amber)", marginTop: 6 }}>
+        <div style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>
           Changes requested{task.resubmit_by ? ` — resubmit by ${fmtDate(task.resubmit_by)}` : ""}
           {task.review_note ? ` · “${task.review_note}”` : ""}
         </div>
@@ -93,7 +93,7 @@ export default function ReviewActions({ task, onDone }) {
           <div className="su-h">Change-request history ({history.length})</div>
           {history.map((h, i) => (
             <div key={i} style={{ fontSize: 12, padding: "5px 0", borderBottom: i < history.length - 1 ? "1px dashed var(--line)" : "none" }}>
-              <span style={{ color: "var(--amber)", fontWeight: 700 }}>Round {i + 1}</span>{" "}
+              <span style={{ color: "var(--red)", fontWeight: 700 }}>Round {i + 1}</span>{" "}
               <span style={{ color: "var(--muted)" }}>
                 · {uname(h.by)}{h.resubmit_by ? ` · resubmit by ${fmtDate(h.resubmit_by)}` : ""}
               </span>

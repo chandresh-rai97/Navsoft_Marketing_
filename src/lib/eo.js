@@ -224,7 +224,8 @@ export function computeChannelV2(metrics, months, weeks, entries) {
   return { monthCells, weekCells };
 }
 
-// Traffic-light class for an attainment ratio: >=1 green, 0.8–<1 yellow, <0.8 red.
+// Traffic-light class for an attainment ratio: >=1 blue (eo-green), 0.8–<1 orange
+// (eo-yellow), <0.8 red. Class names kept; colours live in index.css.
 export function attainColor(attain) {
   if (attain === null || attain === undefined) return "";
   if (attain >= 1) return "eo-green";

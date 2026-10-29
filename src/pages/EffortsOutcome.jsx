@@ -164,7 +164,7 @@ function DashboardView({ db, channels }) {
       )}
       <div className="sub" style={{ marginTop: 10 }}>
         Rolls up from each channel's monthly numbers (which themselves roll up from weeks where weekly data exists).
-        Green ≥ 100%, yellow 80–99%, red &lt; 80%.
+        Blue ≥ 100%, orange 80–99%, red &lt; 80%.
       </div>
     </>
   );
@@ -424,7 +424,7 @@ function ChannelView({ projectId, canEdit }) {
         {gran === "week"
           ? "Weekly entry: Base Target & Achieved per week; Carried In chains from the previous week (and the last week of a month into the first week of the next). The month rolls up from its weeks."
           : "You choose: type Base Target & Achieved straight into the month, or switch to Week to enter them per week. A typed monthly value overrides the weekly rollup; leave it blank and the month fills in from its weeks. The first month's Carried In is also editable. "}
-        Attain % green ≥ 100%, yellow 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
+        Attain % blue ≥ 100%, orange 80–99%, red &lt; 80%. Use ⚙ Columns to freeze or hide columns.
       </div>
     </>
   );

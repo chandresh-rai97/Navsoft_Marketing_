@@ -166,7 +166,7 @@ export default function TaskModal({ id, onClose }) {
 
       {/* Member submits for review, with a proof link. */}
       {canSubmit && (
-        <div className="panel" style={{ background: "var(--accent-soft)", borderColor: "#bfe0d9" }}>
+        <div className="panel" style={{ background: "var(--accent-soft)", borderColor: "var(--note-border)" }}>
           <div className="field" style={{ marginBottom: 8 }}>
             <label>Task proof (link)</label>
             <input
@@ -176,7 +176,7 @@ export default function TaskModal({ id, onClose }) {
             />
           </div>
           <div className="modal-actions" style={{ marginTop: 0 }}>
-            <div style={{ flex: 1, fontSize: 11.5, color: "#0c5e53" }}>
+            <div style={{ flex: 1, fontSize: 11.5, color: "var(--note-text)" }}>
               Submitting sends this task and its proof to <strong>{reviewerName}</strong> to review.
             </div>
             <button className="btn accent" onClick={handleSubmit} disabled={busy}>

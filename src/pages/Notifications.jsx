@@ -42,7 +42,7 @@ export default function Notifications() {
             <div
               key={n.id}
               className="task-row pointer"
-              style={n.read ? { opacity: 0.65 } : { borderColor: "#eab9b9", background: "#fdf6f6" }}
+              style={n.read ? { opacity: 0.65 } : { borderColor: "var(--red-border)", background: "var(--red-faint)" }}
               onClick={() => open(n)}
             >
               <div style={{ width: 10 }}>

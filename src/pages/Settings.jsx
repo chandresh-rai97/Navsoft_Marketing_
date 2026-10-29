@@ -76,7 +76,7 @@ export default function Settings() {
                   {isAdmin() && u.id !== me.id && (
                     <button
                       className="btn sm ghost"
-                      style={{ color: "var(--red)", borderColor: "#eab9b9" }}
+                      style={{ color: "var(--red)", borderColor: "var(--red-border)" }}
                       onClick={() => handleDelete(u)}
                     >
                       Delete

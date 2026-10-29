@@ -63,7 +63,7 @@ export default function MyDay() {
       />
 
       {pinned.length > 0 && (
-        <div className="panel" style={{ borderColor: "#eab9b9", background: "#fdf6f6" }}>
+        <div className="panel" style={{ borderColor: "var(--red-border)", background: "var(--red-faint)" }}>
           <h2>
             ⚠ Needs attention first <span className="muted-lbl">{pinned.length} pinned</span>
           </h2>

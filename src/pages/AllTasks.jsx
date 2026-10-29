@@ -276,7 +276,7 @@ export default function AllTasks() {
           {isAdmin() && (
             <button
               className="btn sm"
-              style={{ background: "var(--red)" }}
+              style={{ background: "var(--danger-solid)" }}
               onClick={handleBulkDelete}
             >
               Delete selected ({selectedIds.length})
@@ -348,7 +348,7 @@ export default function AllTasks() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <button
                         className="btn sm ghost"
-                        style={{ color: "var(--red)", borderColor: "#eab9b9" }}
+                        style={{ color: "var(--red)", borderColor: "var(--red-border)" }}
                         onClick={() => handleDelete(t)}
                       >
                         Delete

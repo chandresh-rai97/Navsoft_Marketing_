@@ -134,7 +134,7 @@ function TrendChart({ days }) {
             y={y(d.sent)}
             height={Math.max(0, y(0) - y(d.sent))}
             rx={Math.min(4, bw / 2)}
-            fill="var(--accent)"
+            fill="var(--accent-text)"
             onMouseMove={(e) => move(e, d)}
             onMouseLeave={() => setTip(null)}
           />
