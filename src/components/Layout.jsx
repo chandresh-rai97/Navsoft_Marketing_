@@ -24,6 +24,7 @@ const COMMAND_NAV = [
   ["reviews", "Reviews"],
   ["efforts", "Efforts vs Outcome"],
   ["campaigns", "Campaigns"],
+  ["hubspot", "HubSpot Team Activity"],
   ["settings", "Admin Settings"],
 ];
 

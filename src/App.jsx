@@ -21,6 +21,7 @@ import Done from "./pages/Done.jsx";
 import Reviews from "./pages/Reviews.jsx";
 import EffortsOutcome from "./pages/EffortsOutcome.jsx";
 import Campaigns from "./pages/Campaigns.jsx";
+import HubSpotActivity from "./pages/HubSpotActivity.jsx";
 import Settings from "./pages/Settings.jsx";
 
 const ROUTES = {
@@ -39,6 +40,7 @@ const ROUTES = {
   reviews: Reviews,
   efforts: EffortsOutcome,
   campaigns: Campaigns,
+  hubspot: HubSpotActivity,
   settings: Settings,
 };
 
@@ -54,6 +56,7 @@ const MANAGER_VIEWS = [
   "grid",
   "reviews",
   "efforts",
+  "hubspot",
 ];
 // Viewer = executive assistant: read-only access to every oversight view.
 const VIEWER_VIEWS = [

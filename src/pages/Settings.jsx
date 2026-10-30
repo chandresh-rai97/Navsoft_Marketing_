@@ -4,6 +4,7 @@ import { useModals } from "../components/ModalHost.jsx";
 import { useDialog } from "../components/Dialog.jsx";
 import PageHead from "../components/PageHead.jsx";
 import InstantlyTags from "../components/InstantlyTags.jsx";
+import HubSpotSettings from "../components/HubSpotSettings.jsx";
 import { ProjectDot } from "../components/TaskRow.jsx";
 import { CONF_LABEL } from "../lib/logic.js";
 import { pct } from "../lib/format.js";
@@ -222,6 +223,8 @@ export default function Settings() {
       </div>
 
       <InstantlyTags />
+
+      <HubSpotSettings />
 
       <div className="panel">
         <h2>Data & seed</h2>
