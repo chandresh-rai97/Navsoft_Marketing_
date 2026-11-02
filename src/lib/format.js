@@ -38,6 +38,17 @@ export function fmtDate(s) {
   });
 }
 
+// "just now", "5m ago", "3h ago", "2d ago"
+export function timeAgo(iso) {
+  if (!iso) return "";
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export function daysSince(iso) {
   if (!iso) return 0;
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));

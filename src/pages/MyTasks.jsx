@@ -12,6 +12,7 @@ const FILTERS = [
   ["week", "This week"],
   ["overdue", "Overdue"],
   ["upcoming", "Upcoming"],
+  ["submitted", "Submitted"],
   ["done", "Done"],
   ["all", "All"],
 ];
@@ -24,14 +25,22 @@ export default function MyTasks() {
   const [group, setGroup] = useState("none");
   const t = todayStr();
 
+  // Submitted tasks wait for review; keep them visible until accepted.
+  const submitted = (x) => x.status === "done_pending_acceptance";
+  const submittedCount = useMemo(
+    () => db.tasks.filter((x) => x.assignee_user_id === me.id && submitted(x)).length,
+    [db.tasks, me.id]
+  );
+
   const rows = useMemo(() => {
     const mine = db.tasks.filter((x) => x.assignee_user_id === me.id);
     const inWeek = (x) => x.due_date >= t && x.due_date <= shiftStr(t, 7);
     const byFilter = {
-      today: (x) => x.planned_for_date === t || x.due_date === t,
-      week: inWeek,
+      today: (x) => x.planned_for_date === t || x.due_date === t || submitted(x),
+      week: (x) => inWeek(x) || submitted(x),
       overdue: (x) => isOverdue(x),
       upcoming: (x) => x.due_date > t && OPEN_STATUSES.includes(x.status),
+      submitted,
       done: (x) => x.status === "done",
       all: () => true,
     };
@@ -76,6 +85,7 @@ export default function MyTasks() {
           {FILTERS.map(([k, l]) => (
             <button key={k} className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>
               {l}
+              {k === "submitted" && <span className="seg-count">{submittedCount}</span>}
             </button>
           ))}
         </div>

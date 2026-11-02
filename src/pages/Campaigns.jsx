@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
+import { useApp } from "../context/AppData.jsx";
+import { canSeeTab } from "../lib/tabAccess.js";
 import {
   PRESETS,
   activeOn,
@@ -163,14 +165,17 @@ export default function Campaigns() {
   const [syncMsg, setSyncMsg] = useState("");
   const [syncErr, setSyncErr] = useState("");
 
+  const { me, db } = useApp();
+  const allowed = canSeeTab("campaigns", me, db);
   const reload = useCallback(async () => {
+    if (!allowed) return; // only load when this user can see the tab
     try {
       setData(await loadCampaignData());
       setLoadErr("");
     } catch (e) {
       setLoadErr(e.message || String(e));
     }
-  }, []);
+  }, [allowed]);
   useEffect(() => {
     reload();
   }, [reload]);

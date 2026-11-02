@@ -1,7 +1,7 @@
 import React from "react";
 import { useApp } from "../context/AppData.jsx";
 import { STATUS_LABEL } from "../lib/logic.js";
-import { fmtDate } from "../lib/format.js";
+import { fmtDate, timeAgo } from "../lib/format.js";
 
 export function ProjectDot({ projectId }) {
   const { P } = useApp();
@@ -18,13 +18,15 @@ export function StatusTag({ status }) {
 const WORKABLE = ["not_started", "in_progress", "blocked", "changes_requested", "carried_forward"];
 
 export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
-  const { me, P, KR, uname, pname, isOverdue, canEditTask, taskDepUserIds, usesReview, canReview } = useApp();
+  const { me, P, KR, uname, pname, isOverdue, canEditTask, taskDepUserIds, usesReview, canReview, reviewerId } = useApp();
   const overdue = isOverdue(t);
   const pinned = opts.pinnable && (overdue || t.status === "carried_forward");
   const kr = KR(t.key_result_id);
   const p = P(t.project_id);
   const dependsOn = taskDepUserIds(t.id).map(uname).filter(Boolean).join(", ");
   const checked = t.status === "done";
+  // My own task, submitted and waiting for the reviewer.
+  const mySubmitted = usesReview(t) && t.assignee_user_id === me?.id && t.status === "done_pending_acceptance";
 
   // Left-hand control: legacy tasks keep the tick; review-flow tasks show a
   // "Submit" (for the assignee) or "Review" (for the reviewer) button instead.
@@ -42,6 +44,12 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
       control = (
         <button className="btn sm accent" onClick={(e) => { e.stopPropagation(); onOpen && onOpen(t.id); }}>
           Review
+        </button>
+      );
+    } else if (mySubmitted) {
+      control = (
+        <button className="btn sm submitted-btn" disabled>
+          ✓ Submitted
         </button>
       );
     } else if (usesReview(t) && t.assignee_user_id === me?.id && WORKABLE.includes(t.status)) {
@@ -87,6 +95,12 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
             <span className="movedflag">moved {t.due_date_change_count}×</span>
           )}
           {overdue && <span className="warnflag">Overdue</span>}
+          {mySubmitted && (
+            <span className="submittedflag">
+              Submitted for review · waiting for {uname(reviewerId(t)) || "a reviewer"}
+              {t.submitted_at && ` · ${timeAgo(t.submitted_at)}`}
+            </span>
+          )}
           {t.status === "changes_requested" && t.resubmit_by && (
             <span className="warnflag">resubmit by {fmtDate(t.resubmit_by)}</span>
           )}

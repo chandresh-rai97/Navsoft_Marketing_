@@ -412,3 +412,9 @@ tr.clk:hover td { background: var(--paper-2); }
 .ta-email, .ta-role { font-size: 11.5px; color: var(--muted); grid-column: 2; }
 .ta-email { overflow-wrap: anywhere; }
 .ta-empty { padding: 14px 12px; font-size: 12.5px; color: var(--muted); }
+
+/* Submitted tasks (waiting for review) */
+.btn.sm.submitted-btn:disabled { opacity: 1; cursor: default; background: var(--blue-soft); color: var(--blue); }
+.submittedflag { color: var(--accent-text); font-weight: 600; }
+.seg-count { font-family: var(--mono); font-size: 10.5px; margin-left: 6px; padding: 0 6px; border-radius: 20px; background: var(--neutral-soft); color: var(--text-muted); }
+.seg button.on .seg-count { background: var(--sidebar-pill-active); color: var(--on-accent); }

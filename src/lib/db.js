@@ -22,22 +22,51 @@ const TABLES = {
   eoEntries: "eo_entries",
 };
 
-// Load the whole team's working set in parallel. Fine for a single-team MVP.
+// Primary-key columns used to page through each table in a stable order.
+const ORDER = {
+  task_dependencies: ["task_id", "user_id"],
+  project_members: ["project_id", "user_id"],
+  task_collaborators: ["task_id", "user_id"],
+};
+const PAGE = 1000;
+
+// Every row of one table the user may read. Supabase returns at most 1,000
+// rows per request, so read page by page until the total is reached (or, if
+// the total isn't known, until a page comes back empty).
+async function fetchTable(table) {
+  const rows = [];
+  let total = null;
+  for (let from = 0; total === null || rows.length < total; ) {
+    let q = supabase.from(table).select("*", from === 0 ? { count: "exact" } : undefined);
+    for (const col of ORDER[table] || ["id"]) q = q.order(col);
+    const { data, error, count } = await q.range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (from === 0 && Number.isFinite(count)) total = count;
+    if (!data.length) break;
+    rows.push(...data);
+    from += data.length;
+  }
+  return rows;
+}
+
+// Load the whole team's working set in parallel. A table the user can't read
+// comes back empty instead of breaking the load.
 export async function loadAll() {
   const entries = Object.entries(TABLES);
   const [results, tabAccess] = await Promise.all([
-    Promise.all(entries.map(([, table]) => supabase.from(table).select("*"))),
+    Promise.all(
+      entries.map(([, table]) =>
+        fetchTable(table).catch((e) => {
+          console.error(`Failed loading ${table}:`, e?.message || e);
+          return [];
+        })
+      )
+    ),
     loadTabAccess().catch(() => null),
   ]);
   const db = {};
-  results.forEach((res, i) => {
-    const [key] = entries[i];
-    if (res.error) {
-      console.error(`Failed loading ${TABLES[key]}:`, res.error.message);
-      db[key] = [];
-    } else {
-      db[key] = res.data || [];
-    }
+  entries.forEach(([key], i) => {
+    db[key] = results[i];
   });
   db.tabAccess = tabAccess; // Campaigns / HubSpot Team Activity access (null = not available)
   return db;

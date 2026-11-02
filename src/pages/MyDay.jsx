@@ -20,7 +20,9 @@ export default function MyDay() {
           x.assignee_user_id === me.id &&
           x.status !== "cancelled" &&
           (x.planned_for_date === today ||
-            (OPEN_STATUSES.includes(x.status) && x.due_date <= today))
+            (OPEN_STATUSES.includes(x.status) && x.due_date <= today) ||
+            // submitted and waiting for review: stays here until accepted
+            x.status === "done_pending_acceptance")
       ),
     [db.tasks, me.id, today]
   );
