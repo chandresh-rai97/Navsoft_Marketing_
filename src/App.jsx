@@ -3,7 +3,7 @@ import { useApp } from "./context/AppData.jsx";
 import { NavContext } from "./context/Nav.jsx";
 import Layout from "./components/Layout.jsx";
 import { ModalHost } from "./components/ModalHost.jsx";
-import { canSeeCampaigns } from "./lib/instantly.js";
+import { GATED_TABS, tabAccessMap } from "./lib/tabAccess.js";
 
 import Login from "./pages/Login.jsx";
 import MyDay from "./pages/MyDay.jsx";
@@ -56,7 +56,6 @@ const MANAGER_VIEWS = [
   "grid",
   "reviews",
   "efforts",
-  "hubspot",
 ];
 // Viewer = executive assistant: read-only access to every oversight view.
 const VIEWER_VIEWS = [
@@ -72,9 +71,10 @@ const VIEWER_VIEWS = [
   "blockers",
 ];
 
-// Campaigns is open to admins, viewers and the Email Marketing project lead.
-function allowedView(role, view, campaigns) {
-  if (view === "campaigns") return campaigns ? view : allowedView(role, null, false);
+// Campaigns and HubSpot Team Activity follow per-tab access (any role can be
+// granted them); every other tab is fixed by role.
+function allowedView(role, view, access) {
+  if (view in GATED_TABS) return access[view] ? view : allowedView(role, null, access);
   if (role === "member") return MEMBER_VIEWS.includes(view) ? view : "myday";
   if (role === "manager") return MANAGER_VIEWS.includes(view) ? view : "dashboard";
   if (role === "viewer") return VIEWER_VIEWS.includes(view) ? view : "dashboard";
@@ -104,7 +104,7 @@ export default function App() {
     return <div className="loading">Loading your workspace…</div>;
   }
 
-  const safeView = allowedView(me.role, view, canSeeCampaigns(me, db.projects));
+  const safeView = allowedView(me.role, view, tabAccessMap(me, db));
   const Page = ROUTES[safeView] || MyDay;
 
   return (

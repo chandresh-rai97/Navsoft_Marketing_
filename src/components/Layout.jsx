@@ -2,7 +2,7 @@ import React from "react";
 import { useApp } from "../context/AppData.jsx";
 import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
 import { daysSince, todayStr } from "../lib/format.js";
-import { canSeeCampaigns } from "../lib/instantly.js";
+import { tabAccessMap } from "../lib/tabAccess.js";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 
 const MEMBER_NAV = [
@@ -40,15 +40,20 @@ const VIEWER_NAV = [
   ["reviews", "Reviews"],
   ["efforts", "Efforts vs Outcome"],
   ["campaigns", "Campaigns"],
+  ["hubspot", "HubSpot Team Activity"],
   ["goals", "Goals"],
   ["blockers", "Blockers"],
 ];
 
-const CAMPAIGNS_NAV = ["campaigns", "Campaigns"];
+// Tabs with per-tab access: shown to whoever has been granted them, any role.
+const TAB_NAV = [
+  ["campaigns", "Campaigns"],
+  ["hubspot", "HubSpot Team Activity"],
+];
+const gate = (items, access) => items.filter(([k]) => !(k in access) || access[k]);
 
-// `campaigns`: may this user see the Campaigns tab (admin, viewer, or the
-// Email Marketing project lead).
-function navConfig(role, campaigns) {
+// `access`: { campaigns, hubspot } — may this user see each per-tab-access tab.
+function navConfig(role, access) {
   if (role === "admin") {
     return { "Your work": MEMBER_NAV, Command: COMMAND_NAV };
   }
@@ -56,21 +61,19 @@ function navConfig(role, campaigns) {
     // Managers are scoped to their own projects — no People/Workload or Settings.
     return {
       "Your work": MEMBER_NAV,
-      Command: COMMAND_NAV.filter(
-        (a) => a[0] !== "settings" && a[0] !== "people" && (a[0] !== "campaigns" || campaigns)
-      ),
+      Command: gate(COMMAND_NAV.filter((a) => a[0] !== "settings" && a[0] !== "people"), access),
     };
   }
   if (role === "viewer") {
-    return { Watch: VIEWER_NAV };
+    return { Watch: gate(VIEWER_NAV, access) };
   }
-  return { "Your work": campaigns ? [...MEMBER_NAV, CAMPAIGNS_NAV] : MEMBER_NAV };
+  return { "Your work": [...MEMBER_NAV, ...gate(TAB_NAV, access)] };
 }
 
 export default function Layout({ view, navigate, children }) {
   const { me, db, signOut, canReview, unreadCount } = useApp();
   if (!me) return null;
-  const cfg = navConfig(me.role, canSeeCampaigns(me, db.projects));
+  const cfg = navConfig(me.role, tabAccessMap(me, db));
   const today = todayStr();
 
   const pendingReview = db.tasks.filter(

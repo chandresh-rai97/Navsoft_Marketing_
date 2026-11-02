@@ -31,6 +31,7 @@ const AppCtx = createContext(null);
 export const useApp = () => useContext(AppCtx);
 
 const EMPTY_DB = {
+  tabAccess: null,
   users: [],
   projects: [],
   objectives: [],

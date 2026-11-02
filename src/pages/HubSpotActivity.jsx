@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import TabAccessButton from "../components/TabAccess.jsx";
 import { fmtUpdated } from "../lib/instantly.js";
 import {
   BACKFILL_FROM,
@@ -264,6 +265,7 @@ export default function HubSpotActivity() {
         {syncMsg && <div className="ix-sub">{syncMsg}</div>}
         {syncErr && <div className="ix-sub ix-red">{syncErr}</div>}
       </div>
+      <TabAccessButton tabKey="hubspot_team_activity" />
       <button
         type="button"
         className="btn sm ghost ix-refresh"

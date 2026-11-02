@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import TabAccessButton from "../components/TabAccess.jsx";
 import {
   PRESETS,
   activeOn,
@@ -256,6 +257,7 @@ export default function Campaigns() {
         {syncMsg && <div className="ix-sub">{syncMsg}</div>}
         {syncErr && <div className="ix-sub ix-red">{syncErr}</div>}
       </div>
+      <TabAccessButton tabKey="campaigns" />
       <button
         type="button"
         className="btn sm ghost ix-refresh"

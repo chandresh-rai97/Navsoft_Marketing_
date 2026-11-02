@@ -387,3 +387,28 @@ tr.clk:hover td { background: var(--paper-2); }
 .hs-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .hs-tip { position: absolute; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.12); padding: 8px 10px; font-size: 12px; white-space: nowrap; z-index: 5; }
 .hs-tip b { display: block; margin-bottom: 2px; }
+
+/* "Who can see this tab" panel (Campaigns / HubSpot Team Activity) */
+.ix-updated > .ix-refresh { flex-shrink: 0; }
+.ta-roles { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.ta-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.ta-toggle.disabled { cursor: default; }
+.ta-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ta-track { width: 32px; height: 18px; border-radius: 20px; background: var(--neutral-soft); border: 1px solid var(--line); position: relative; flex-shrink: 0; transition: background .15s; }
+.ta-knob { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-muted); transition: transform .15s; }
+.ta-toggle input:checked + .ta-track { background: var(--accent); border-color: var(--accent); }
+.ta-toggle input:checked + .ta-track .ta-knob { transform: translateX(14px); background: var(--on-accent); }
+.ta-toggle input:focus-visible + .ta-track { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ta-toggle.disabled .ta-track { opacity: .6; }
+.ta-note { font-size: 11px; color: var(--muted); }
+.ta-list { max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.ta-list::-webkit-scrollbar { width: 6px; }
+.ta-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+.ta-person { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--hairline); cursor: pointer; font-size: 13px; }
+.ta-person:last-child { border-bottom: 0; }
+.ta-person:hover { background: var(--paper-2); }
+.ta-person input { grid-row: span 3; width: 16px; height: 16px; }
+.ta-name { font-weight: 600; color: var(--ink); }
+.ta-email, .ta-role { font-size: 11.5px; color: var(--muted); grid-column: 2; }
+.ta-email { overflow-wrap: anywhere; }
+.ta-empty { padding: 14px 12px; font-size: 12.5px; color: var(--muted); }

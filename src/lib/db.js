@@ -2,6 +2,7 @@
 // the RLS policies defined in supabase/migrations/0001_init.sql.
 import { supabase } from "./supabase.js";
 import { nowIso } from "./format.js";
+import { loadTabAccess } from "./tabAccess.js";
 
 const TABLES = {
   users: "profiles",
@@ -24,9 +25,10 @@ const TABLES = {
 // Load the whole team's working set in parallel. Fine for a single-team MVP.
 export async function loadAll() {
   const entries = Object.entries(TABLES);
-  const results = await Promise.all(
-    entries.map(([, table]) => supabase.from(table).select("*"))
-  );
+  const [results, tabAccess] = await Promise.all([
+    Promise.all(entries.map(([, table]) => supabase.from(table).select("*"))),
+    loadTabAccess().catch(() => null),
+  ]);
   const db = {};
   results.forEach((res, i) => {
     const [key] = entries[i];
@@ -37,6 +39,7 @@ export async function loadAll() {
       db[key] = res.data || [];
     }
   });
+  db.tabAccess = tabAccess; // Campaigns / HubSpot Team Activity access (null = not available)
   return db;
 }
 
