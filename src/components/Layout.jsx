@@ -9,7 +9,6 @@ const MEMBER_NAV = [
   ["myday", "My Day"],
   ["mytasks", "My Tasks"],
   ["notifications", "Notifications"],
-  ["goals", "Goals"],
   ["myweek", "My Week"],
   ["blockers", "Blockers"],
 ];
@@ -21,10 +20,10 @@ const COMMAND_NAV = [
   ["done", "Done"],
   ["people", "People / Workload"],
   ["grid", "Projects"], // summary boxes → drill-in (route key kept as "grid")
-  ["reviews", "Reviews"],
   ["efforts", "Efforts vs Outcome"],
   ["campaigns", "Campaigns"],
   ["hubspot", "HubSpot Team Activity"],
+  ["coldcalling", "Cold Calling Activity"],
   ["settings", "Admin Settings"],
 ];
 
@@ -37,11 +36,10 @@ const VIEWER_NAV = [
   ["done", "Done"],
   ["people", "People / Workload"],
   ["grid", "Projects"],
-  ["reviews", "Reviews"],
   ["efforts", "Efforts vs Outcome"],
   ["campaigns", "Campaigns"],
   ["hubspot", "HubSpot Team Activity"],
-  ["goals", "Goals"],
+  ["coldcalling", "Cold Calling Activity"],
   ["blockers", "Blockers"],
 ];
 
@@ -49,6 +47,7 @@ const VIEWER_NAV = [
 const TAB_NAV = [
   ["campaigns", "Campaigns"],
   ["hubspot", "HubSpot Team Activity"],
+  ["coldcalling", "Cold Calling Activity"],
 ];
 const gate = (items, access) => items.filter(([k]) => !(k in access) || access[k]);
 

@@ -64,6 +64,10 @@
   /* HubSpot Team Activity series */
   --hs-calls: var(--navai-blue); --hs-emails: var(--navai-light-blue); --hs-meetings: var(--navai-orange);
   --hs-tasks: var(--text-subtle);
+  /* Cold Calling outcome groups (NavAI palette only) */
+  --cc-pos: var(--navai-blue); --cc-fu: var(--navai-light-blue); --cc-neg: var(--navai-orange);
+  --cc-nc: var(--text-subtle); --cc-bad: var(--navai-red);
+  --cc-other: color-mix(in oklab, var(--navai-blue) 45%, var(--text-subtle));
 
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
   --sans: "Plus Jakarta Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -83,6 +87,7 @@
   --ok-text: var(--navai-light-blue);
   --warn-text: var(--navai-orange);
   --hs-calls: color-mix(in oklab, var(--navai-blue) 72%, white);
+  --cc-pos: color-mix(in oklab, var(--navai-blue) 72%, white);
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--text-body); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
@@ -418,3 +423,16 @@ tr.clk:hover td { background: var(--paper-2); }
 .submittedflag { color: var(--accent-text); font-weight: 600; }
 .seg-count { font-family: var(--mono); font-size: 10.5px; margin-left: 6px; padding: 0 6px; border-radius: 20px; background: var(--neutral-soft); color: var(--text-muted); }
 .seg button.on .seg-count { background: var(--sidebar-pill-active); color: var(--on-accent); }
+
+/* Cold Calling Activity tab (shares the HubSpot tab's hs-* layout) */
+.cc-warn { background: var(--amber-soft); border: 1px solid var(--line); border-left: 4px solid var(--navai-orange); color: var(--ink); font-size: 12.5px; line-height: 1.5; padding: 9px 12px; border-radius: 9px; margin-bottom: 14px; }
+.cc-select { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; font-size: 12.5px; font-family: var(--sans); background: var(--surface-input); color: var(--ink); }
+.cc-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 0 18px; }
+.cc-bars { padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.cc-brow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr) 48px; gap: 10px; align-items: center; font-size: 12.5px; }
+.cc-blabel { font-size: 11.5px; color: var(--muted); }
+.cc-track { height: 10px; border-radius: 20px; background: var(--paper-2); border: 1px solid var(--hairline); overflow: hidden; }
+.cc-fill { height: 100%; border-radius: 20px; }
+.cc .hs-stages .seg { margin: 0; }
+.hs-scroll td.cc-wrap { white-space: normal; min-width: 200px; }
+.cc .hs-tip { white-space: normal; width: 290px; }

@@ -8,7 +8,6 @@ import { GATED_TABS, tabAccessMap } from "./lib/tabAccess.js";
 import Login from "./pages/Login.jsx";
 import MyDay from "./pages/MyDay.jsx";
 import MyTasks from "./pages/MyTasks.jsx";
-import Goals from "./pages/Goals.jsx";
 import MyWeek from "./pages/MyWeek.jsx";
 import Blockers from "./pages/Blockers.jsx";
 import Notifications from "./pages/Notifications.jsx";
@@ -18,16 +17,15 @@ import People from "./pages/People.jsx";
 import Grid from "./pages/Grid.jsx";
 import Acceptance from "./pages/Acceptance.jsx";
 import Done from "./pages/Done.jsx";
-import Reviews from "./pages/Reviews.jsx";
 import EffortsOutcome from "./pages/EffortsOutcome.jsx";
 import Campaigns from "./pages/Campaigns.jsx";
 import HubSpotActivity from "./pages/HubSpotActivity.jsx";
+import ColdCalling from "./pages/ColdCalling.jsx";
 import Settings from "./pages/Settings.jsx";
 
 const ROUTES = {
   myday: MyDay,
   mytasks: MyTasks,
-  goals: Goals,
   myweek: MyWeek,
   blockers: Blockers,
   notifications: Notifications,
@@ -37,14 +35,16 @@ const ROUTES = {
   done: Done,
   people: People,
   grid: Grid,
-  reviews: Reviews,
   efforts: EffortsOutcome,
   campaigns: Campaigns,
   hubspot: HubSpotActivity,
+  coldcalling: ColdCalling,
   settings: Settings,
 };
 
-const MEMBER_VIEWS = ["myday", "mytasks", "notifications", "goals", "myweek", "blockers"];
+// Goals and Reviews are hidden from the sidebar and routing for now (pages,
+// tables and data are kept; add them back here and in Layout.jsx to restore).
+const MEMBER_VIEWS = ["myday", "mytasks", "notifications", "myweek", "blockers"];
 // Managers are scoped: their work tabs + their project oversight, but no
 // People/Workload and no admin Settings.
 const MANAGER_VIEWS = [
@@ -54,7 +54,6 @@ const MANAGER_VIEWS = [
   "acceptance",
   "done",
   "grid",
-  "reviews",
   "efforts",
 ];
 // Viewer = executive assistant: read-only access to every oversight view.
@@ -65,13 +64,11 @@ const VIEWER_VIEWS = [
   "done",
   "people",
   "grid",
-  "reviews",
   "efforts",
-  "goals",
   "blockers",
 ];
 
-// Campaigns and HubSpot Team Activity follow per-tab access (any role can be
+// Campaigns, HubSpot Team Activity and Cold Calling Activity follow per-tab access (any role can be
 // granted them); every other tab is fixed by role.
 function allowedView(role, view, access) {
   if (view in GATED_TABS) return access[view] ? view : allowedView(role, null, access);
