@@ -338,19 +338,19 @@ export default function ColdCalling() {
           <table>
             <thead>
               <tr>
-                <th>Caller</th><th className="num">Calls</th><th className="num">Leads called</th><th className="num">Connected calls</th>
+                <th>Caller</th><th className="num">Leads called</th><th className="num">Connected calls</th>
                 <th className="num">Connect rate</th><th className="num">Positive</th><th className="num">Meetings</th><th className="num">Follow-up</th>
                 <th className="num">Negative</th><th className="num">Not connected</th><th className="num">Bad numbers</th>
               </tr>
             </thead>
             <tbody>
               {ready && !v.perCaller.length && (
-                <tr><td colSpan={11} className="hs-empty">No calls logged in these dates.</td></tr>
+                <tr><td colSpan={10} className="hs-empty">No calls logged in these dates.</td></tr>
               )}
               {v.perCaller.map(([n, s]) => (
                 <tr key={n}>
                   <td className="hs-who">{n || "Not filled in"}</td>
-                  <Num v={s.calls} /><Num v={s.leads} /><Num v={s.connected} /><Num v={s.calls} text={s.rate} />
+                  <Num v={s.leads} /><Num v={s.connected} /><Num v={s.calls} text={s.rate} />
                   <Num v={s.pos} /><Num v={s.meetings} /><Num v={s.fu} /><Num v={s.neg} /><Num v={s.nc} /><Num v={s.bad} />
                 </tr>
               ))}
@@ -359,7 +359,7 @@ export default function ColdCalling() {
               <tfoot>
                 <tr>
                   <td>Team total</td>
-                  {["calls", "leads", "connected", "rate", "pos", "meetings", "fu", "neg", "nc", "bad"].map((k) => (
+                  {["leads", "connected", "rate", "pos", "meetings", "fu", "neg", "nc", "bad"].map((k) => (
                     <td key={k} className="num">{k === "rate" ? v.team.rate : fmt(v.team[k])}</td>
                   ))}
                 </tr>
