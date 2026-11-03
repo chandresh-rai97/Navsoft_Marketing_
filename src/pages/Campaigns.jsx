@@ -333,7 +333,6 @@ export default function Campaigns() {
               <Stat value={dash(fmtNum(v.t.new_leads))} label="New leads reached" sub="first email to a lead" />
               <Stat value={dash(fmtRate(v.r.open))} label="Open rate" sub="unique opens ÷ sent" />
               <Stat value={dash(fmtRate(v.r.click))} label="Click rate" sub="unique clicks ÷ sent" />
-              <Stat value={dash(fmtNum(v.t.replies))} label="Replies" sub={`${dash(fmtRate(v.r.reply))} of sent`} />
               <Stat value={dash(fmtRate(v.r.bounce))} label="Bounce rate" sub="above 5% hurts sender reputation"
                 alert={ready && v.r.bounce != null && v.r.bounce > 0.05} />
             </div>
