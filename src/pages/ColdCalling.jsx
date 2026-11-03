@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { canSeeTab } from "../lib/tabAccess.js";
@@ -279,41 +280,43 @@ export default function ColdCalling() {
         </div>
       )}
 
-      <div className="panel hs-filters">
-        <div className="hs-row" role="group" aria-label="Date range">
-          <span className="ix-lbl hs-flabel">Call date</span>
-          <Seg label="Date range" options={PRESETS} value={preset} onChange={setPreset} />
-          <label className="ix-date">
-            <span className="ix-lbl">From</span>
-            <input type="date" aria-label="From" value={from} onChange={(e) => pickDate("from", e.target.value, e.target.validity.valid)} />
-          </label>
-          <label className="ix-date">
-            <span className="ix-lbl">To</span>
-            <input type="date" aria-label="To" value={to} onChange={(e) => pickDate("to", e.target.value, e.target.validity.valid)} />
-          </label>
-          <span className="hs-range-note">{from === to ? niceY(from) : `${niceY(from)} – ${niceY(to)}`}</span>
+      <MobileFilters count={(preset !== "all") + [caller, region, product, industry].filter(Boolean).length}>
+        <div className="panel hs-filters">
+          <div className="hs-row" role="group" aria-label="Date range">
+            <span className="ix-lbl hs-flabel">Call date</span>
+            <Seg label="Date range" options={PRESETS} value={preset} onChange={setPreset} />
+            <label className="ix-date">
+              <span className="ix-lbl">From</span>
+              <input type="date" aria-label="From" value={from} onChange={(e) => pickDate("from", e.target.value, e.target.validity.valid)} />
+            </label>
+            <label className="ix-date">
+              <span className="ix-lbl">To</span>
+              <input type="date" aria-label="To" value={to} onChange={(e) => pickDate("to", e.target.value, e.target.validity.valid)} />
+            </label>
+            <span className="hs-range-note">{from === to ? niceY(from) : `${niceY(from)} – ${niceY(to)}`}</span>
+          </div>
+          <div className="hs-row" role="group" aria-label="Caller">
+            <span className="ix-lbl hs-flabel">Caller</span>
+            <Seg label="Caller" options={[[null, "All callers"], ...callers.map((n) => [n, n])]} value={caller} onChange={setCaller} />
+          </div>
+          <div className="hs-row" role="group" aria-label="Region">
+            <span className="ix-lbl hs-flabel">Region</span>
+            <Seg label="Region" options={[[null, "All regions"], ...regions.map((n) => [n, n])]} value={region} onChange={setRegion} />
+          </div>
+          <div className="hs-row">
+            <span className="ix-lbl hs-flabel">Product</span>
+            <select className="cc-select" aria-label="Product or service offering" value={product} onChange={(e) => setProduct(e.target.value)}>
+              <option value="">All products</option>
+              {products.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <span className="ix-lbl" style={{ marginLeft: 12 }}>Industry</span>
+            <select className="cc-select" aria-label="Industry" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+              <option value="">All industries</option>
+              {industries.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
         </div>
-        <div className="hs-row" role="group" aria-label="Caller">
-          <span className="ix-lbl hs-flabel">Caller</span>
-          <Seg label="Caller" options={[[null, "All callers"], ...callers.map((n) => [n, n])]} value={caller} onChange={setCaller} />
-        </div>
-        <div className="hs-row" role="group" aria-label="Region">
-          <span className="ix-lbl hs-flabel">Region</span>
-          <Seg label="Region" options={[[null, "All regions"], ...regions.map((n) => [n, n])]} value={region} onChange={setRegion} />
-        </div>
-        <div className="hs-row">
-          <span className="ix-lbl hs-flabel">Product</span>
-          <select className="cc-select" aria-label="Product or service offering" value={product} onChange={(e) => setProduct(e.target.value)}>
-            <option value="">All products</option>
-            {products.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <span className="ix-lbl" style={{ marginLeft: 12 }}>Industry</span>
-          <select className="cc-select" aria-label="Industry" value={industry} onChange={(e) => setIndustry(e.target.value)}>
-            <option value="">All industries</option>
-            {industries.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-      </div>
+      </MobileFilters>
 
       <div className="cards hs-tiles">
         <Tile label="Contacts given" value={dash(fmt(v.contacts.given))}

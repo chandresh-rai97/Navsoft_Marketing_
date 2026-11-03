@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { canSeeTab } from "../lib/tabAccess.js";
@@ -297,27 +298,29 @@ export default function HubSpotActivity() {
         <div className="note">No HubSpot data yet. Press the refresh button at the top right to run the first sync.</div>
       )}
 
-      <div className="panel hs-filters">
-        <div className="hs-row" role="group" aria-label="Date range">
-          <span className="ix-lbl hs-flabel">Date range</span>
-          <Seg label="Date range" options={PRESETS} value={preset} onChange={pickPreset} />
-          <label className="ix-date">
-            <span className="ix-lbl">From</span>
-            <input type="date" min={BACKFILL_FROM} max="2099-12-31" aria-label="From" value={from}
-              onChange={(e) => pickDate("from", e.target.value, e.target.validity.valid)} />
-          </label>
-          <label className="ix-date">
-            <span className="ix-lbl">To</span>
-            <input type="date" min={BACKFILL_FROM} max="2099-12-31" aria-label="To" value={to}
-              onChange={(e) => pickDate("to", e.target.value, e.target.validity.valid)} />
-          </label>
-          <span className="hs-range-note">{from === to ? niceY(from) : `${niceY(from)} – ${niceY(to)}`}</span>
+      <MobileFilters count={(preset !== "month") + (person ? 1 : 0)}>
+        <div className="panel hs-filters">
+          <div className="hs-row" role="group" aria-label="Date range">
+            <span className="ix-lbl hs-flabel">Date range</span>
+            <Seg label="Date range" options={PRESETS} value={preset} onChange={pickPreset} />
+            <label className="ix-date">
+              <span className="ix-lbl">From</span>
+              <input type="date" min={BACKFILL_FROM} max="2099-12-31" aria-label="From" value={from}
+                onChange={(e) => pickDate("from", e.target.value, e.target.validity.valid)} />
+            </label>
+            <label className="ix-date">
+              <span className="ix-lbl">To</span>
+              <input type="date" min={BACKFILL_FROM} max="2099-12-31" aria-label="To" value={to}
+                onChange={(e) => pickDate("to", e.target.value, e.target.validity.valid)} />
+            </label>
+            <span className="hs-range-note">{from === to ? niceY(from) : `${niceY(from)} – ${niceY(to)}`}</span>
+          </div>
+          <div className="hs-row" role="group" aria-label="Person">
+            <span className="ix-lbl hs-flabel">Person</span>
+            <Seg label="Person" options={[[null, "All people"], ...people]} value={person} onChange={setPerson} />
+          </div>
         </div>
-        <div className="hs-row" role="group" aria-label="Person">
-          <span className="ix-lbl hs-flabel">Person</span>
-          <Seg label="Person" options={[[null, "All people"], ...people]} value={person} onChange={setPerson} />
-        </div>
-      </div>
+      </MobileFilters>
 
       <div className="panel hs-card hs-alert">
         <div className="hs-head">

@@ -24,6 +24,7 @@ function apply(choice) {
     choice === "dark" ||
     (choice === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0B0B0B" : "#101010");
 }
 
 export default function ThemeSwitch() {

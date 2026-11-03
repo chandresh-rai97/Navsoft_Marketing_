@@ -7,3 +7,9 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Always fetch the newest service worker so new deploys are picked up.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

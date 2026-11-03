@@ -4,6 +4,8 @@ import { useNav } from "../context/Nav.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useDialog } from "../components/Dialog.jsx";
 import PageHead from "../components/PageHead.jsx";
+import MobileFilters from "../components/MobileFilters.jsx";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 import { ProjectDot, StatusTag } from "../components/TaskRow.jsx";
 import { STATUSES, STATUS_LABEL, CARRY_THRESHOLD, MOVE_REASON_AFTER } from "../lib/logic.js";
 import { fmtDate, todayStr, shiftStr } from "../lib/format.js";
@@ -63,6 +65,7 @@ export default function AllTasks() {
     kr: arg?.kr || "",
     quick: "",
   });
+  const mobile = useIsMobile();
   const [dateF, setDateF] = useState({ field: "due_date", op: "", v1: "", v2: "" });
   const [sel, setSel] = useState({});
   const [bulkUser, setBulkUser] = useState("");
@@ -181,81 +184,83 @@ export default function AllTasks() {
         }
       />
 
-      <div className="filters">
-        <select value={f.assignee} onChange={(e) => set("assignee", e.target.value)}>
-          <option value="">All people</option>
-          {activeUsers().map((u) => (
-            <option key={u.id} value={u.id}>{u.name}</option>
-          ))}
-        </select>
-        <select value={f.status} onChange={(e) => set("status", e.target.value)}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-          ))}
-        </select>
-        <select value={f.project} onChange={(e) => set("project", e.target.value)}>
-          <option value="">All projects</option>
-          {scopedProjects().map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select value={f.kr} onChange={(e) => set("kr", e.target.value)}>
-          <option value="">All KRs</option>
-          {db.keyResults.map((k) => (
-            <option key={k.id} value={k.id}>{k.title}</option>
-          ))}
-        </select>
-        <div className="seg">
-          {[["", "All"], ["overdue", "Overdue"], ["blocked", "Blocked"], ["carried", "Pushed 3+×"]].map(
-            ([k, l]) => (
-              <button key={k} className={f.quick === k ? "on" : ""} onClick={() => set("quick", k)}>
-                {l}
-              </button>
-            )
+      <MobileFilters count={Object.values(f).filter(Boolean).length + (dateF.op ? 1 : 0)}>
+        <div className="filters">
+          <select value={f.assignee} onChange={(e) => set("assignee", e.target.value)}>
+            <option value="">All people</option>
+            {activeUsers().map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+          <select value={f.status} onChange={(e) => set("status", e.target.value)}>
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+          <select value={f.project} onChange={(e) => set("project", e.target.value)}>
+            <option value="">All projects</option>
+            {scopedProjects().map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <select value={f.kr} onChange={(e) => set("kr", e.target.value)}>
+            <option value="">All KRs</option>
+            {db.keyResults.map((k) => (
+              <option key={k.id} value={k.id}>{k.title}</option>
+            ))}
+          </select>
+          <div className="seg">
+            {[["", "All"], ["overdue", "Overdue"], ["blocked", "Blocked"], ["carried", "Pushed 3+×"]].map(
+              ([k, l]) => (
+                <button key={k} className={f.quick === k ? "on" : ""} onClick={() => set("quick", k)}>
+                  {l}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Date filter builder */}
+        <div className="filters" style={{ marginTop: -6 }}>
+          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Date filter:</span>
+          <select value={dateF.field} onChange={(e) => setD("field", e.target.value)}>
+            {DATE_FIELDS.map(([k, l]) => (
+              <option key={k} value={k}>{l}</option>
+            ))}
+          </select>
+          <select value={dateF.op} onChange={(e) => setD("op", e.target.value)}>
+            <option value="">— no date filter —</option>
+            {DATE_OPS.map(([k, l]) => (
+              <option key={k} value={k}>{l}</option>
+            ))}
+          </select>
+          {NEEDS_DATE.includes(dateF.op) && (
+            <input type="date" value={dateF.v1} onChange={(e) => setD("v1", e.target.value)} />
+          )}
+          {dateF.op === "between" && (
+            <>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>and</span>
+              <input type="date" value={dateF.v2} onChange={(e) => setD("v2", e.target.value)} />
+            </>
+          )}
+          {NEEDS_NUM.includes(dateF.op) && (
+            <input
+              type="number"
+              min="0"
+              placeholder="days"
+              style={{ width: 90 }}
+              value={dateF.v1}
+              onChange={(e) => setD("v1", e.target.value)}
+            />
+          )}
+          {dateF.op && (
+            <button className="btn sm ghost" onClick={() => setDateF({ field: dateF.field, op: "", v1: "", v2: "" })}>
+              Clear
+            </button>
           )}
         </div>
-      </div>
-
-      {/* Date filter builder */}
-      <div className="filters" style={{ marginTop: -6 }}>
-        <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Date filter:</span>
-        <select value={dateF.field} onChange={(e) => setD("field", e.target.value)}>
-          {DATE_FIELDS.map(([k, l]) => (
-            <option key={k} value={k}>{l}</option>
-          ))}
-        </select>
-        <select value={dateF.op} onChange={(e) => setD("op", e.target.value)}>
-          <option value="">— no date filter —</option>
-          {DATE_OPS.map(([k, l]) => (
-            <option key={k} value={k}>{l}</option>
-          ))}
-        </select>
-        {NEEDS_DATE.includes(dateF.op) && (
-          <input type="date" value={dateF.v1} onChange={(e) => setD("v1", e.target.value)} />
-        )}
-        {dateF.op === "between" && (
-          <>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>and</span>
-            <input type="date" value={dateF.v2} onChange={(e) => setD("v2", e.target.value)} />
-          </>
-        )}
-        {NEEDS_NUM.includes(dateF.op) && (
-          <input
-            type="number"
-            min="0"
-            placeholder="days"
-            style={{ width: 90 }}
-            value={dateF.v1}
-            onChange={(e) => setD("v1", e.target.value)}
-          />
-        )}
-        {dateF.op && (
-          <button className="btn sm ghost" onClick={() => setDateF({ field: dateF.field, op: "", v1: "", v2: "" })}>
-            Clear
-          </button>
-        )}
-      </div>
+      </MobileFilters>
 
       {canBulk && selectedIds.length > 0 && (
         <div className="panel" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -288,6 +293,52 @@ export default function AllTasks() {
 
       {rows.length === 0 ? (
         <div className="empty">No tasks match.</div>
+      ) : mobile ? (
+        // Phones: one card per task instead of a wide table row.
+        <div className="mcards">
+          {rows.map((t) => (
+            <div key={t.id} className="mcard">
+              <div className="mcard-top">
+                {canBulk && (
+                  <input
+                    type="checkbox"
+                    aria-label={"Select " + t.title}
+                    checked={!!sel[t.id]}
+                    onChange={(e) => setSel((s) => ({ ...s, [t.id]: e.target.checked }))}
+                  />
+                )}
+                <button type="button" className="mcard-title" onClick={() => modals.openTask(t.id)}>
+                  {t.title}
+                </button>
+              </div>
+              <div className="task-meta">
+                <span className="chip">
+                  <ProjectDot projectId={t.project_id} />
+                  {pname(t.project_id)}
+                </span>
+                <StatusTag status={t.status} />
+                <span>{uname(t.assignee_user_id)}</span>
+                <span>Due {fmtDate(t.due_date)}</span>
+                {isOverdue(t) && <span className="warnflag">overdue</span>}
+                {t.carry_forward_count >= CARRY_THRESHOLD && <span className="warnflag">↻{t.carry_forward_count}</span>}
+                {t.due_date_change_count >= MOVE_REASON_AFTER && <span className="movedflag">moved{t.due_date_change_count}×</span>}
+              </div>
+              <div className="mcard-actions">
+                <button type="button" className="btn ghost" onClick={() => modals.openTask(t.id)}>Open</button>
+                {isAdmin() && (
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ color: "var(--red)", borderColor: "var(--red-border)" }}
+                    onClick={() => handleDelete(t)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="panel" style={{ padding: "6px 10px" }}>
           <table>

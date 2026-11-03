@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "../context/AppData.jsx";
 import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
 import { daysSince, todayStr } from "../lib/format.js";
@@ -69,9 +69,22 @@ function navConfig(role, access) {
   return { "Your work": [...MEMBER_NAV, ...gate(TAB_NAV, access)] };
 }
 
+// Phone bottom bar: the four most-used tabs for each role.
+const BOTTOM_TABS = {
+  member: [["myday", "My Day", "☀"], ["mytasks", "My Tasks", "✓"], ["notifications", "Notifications", "🔔"], ["blockers", "Blockers", "⛔"]],
+  manager: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["myday", "My Day", "☀"]],
+  admin: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["myday", "My Day", "☀"]],
+  viewer: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["done", "Done", "✓"]],
+};
+
 export default function Layout({ view, navigate, children }) {
   const { me, db, signOut, canReview, unreadCount } = useApp();
+  const [menuOpen, setMenuOpen] = useState(false);
   if (!me) return null;
+  const go = (key) => {
+    setMenuOpen(false);
+    navigate(key);
+  };
   const cfg = navConfig(me.role, tabAccessMap(me, db));
   const today = todayStr();
 
@@ -103,9 +116,24 @@ export default function Layout({ view, navigate, children }) {
     return null;
   };
 
+  const allItems = Object.values(cfg).flat();
+  const title = (allItems.find(([k]) => k === view) || [null, "Cadence"])[1];
+  const tabs = BOTTOM_TABS[me.role] || BOTTOM_TABS.member;
+
   return (
-    <div className="app">
-      <nav className="side">
+    <div className={"app" + (menuOpen ? " menu-open" : "")}>
+      {/* Phones only: top bar with the menu button, and the bottom tab bar. */}
+      <header className="mtop">
+        <button type="button" className="mtop-menu" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
+          ☰
+        </button>
+        <span className="mtop-title">{title}</span>
+      </header>
+      <div className="mside-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      <nav className="side" aria-label="Main menu">
+        <button type="button" className="mside-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+          ✕
+        </button>
         <img className="brand-logo" src="/brand/navai-lockup-light.png" alt="NavAI" />
         <div className="brand">
           Cadence
@@ -120,7 +148,7 @@ export default function Layout({ view, navigate, children }) {
                 <button
                   key={key}
                   className={"navbtn" + (view === key ? " active" : "")}
-                  onClick={() => navigate(key)}
+                  onClick={() => go(key)}
                 >
                   <span>{label}</span>
                   {pill && (
@@ -141,6 +169,18 @@ export default function Layout({ view, navigate, children }) {
         </div>
       </nav>
       <main className="main">{children}</main>
+      <nav className="mtabs" aria-label="Quick tabs">
+        {tabs.map(([key, label, icon]) => {
+          const pill = pillFor(key);
+          return (
+            <button key={key} type="button" className={"mtab" + (view === key ? " active" : "")} onClick={() => go(key)} aria-current={view === key ? "page" : undefined}>
+              <span className="mtab-ico" aria-hidden="true">{icon}</span>
+              <span className="mtab-lbl">{label}</span>
+              {pill && <span className={"mtab-pill" + (pill.warn ? " warn" : "")}>{pill.text}</span>}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

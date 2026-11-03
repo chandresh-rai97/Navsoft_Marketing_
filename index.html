@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="theme-color" content="#101010" />
     <script>
       // Apply the saved theme before the app loads so there is no flash.
       // Choice: "light" (default) | "dark" | "system"; stored in localStorage.
@@ -13,6 +14,9 @@
           if (choice !== "dark" && choice !== "system") choice = "light";
           var dark = choice === "dark" || (choice === "system" && mq && mq.matches);
           document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+          // Phone status bar / browser bar colour follows the theme (the sidebar colour).
+          var tc = document.querySelector('meta[name="theme-color"]');
+          if (tc) tc.setAttribute("content", dark ? "#0B0B0B" : "#101010");
         }
         apply();
         // "System" keeps following the OS setting (e.g. on the login page).
@@ -20,7 +24,13 @@
       })();
     </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Cadence" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

@@ -3,6 +3,7 @@ import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useTaskHandlers } from "../hooks/useTaskHandlers.js";
 import PageHead from "../components/PageHead.jsx";
+import MobileFilters from "../components/MobileFilters.jsx";
 import TaskRow from "../components/TaskRow.jsx";
 import { OPEN_STATUSES } from "../lib/logic.js";
 import { todayStr, shiftStr } from "../lib/format.js";
@@ -80,21 +81,23 @@ export default function MyTasks() {
           </>
         }
       />
-      <div className="filters">
-        <div className="seg">
-          {FILTERS.map(([k, l]) => (
-            <button key={k} className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>
-              {l}
-              {k === "submitted" && <span className="seg-count">{submittedCount}</span>}
-            </button>
-          ))}
+      <MobileFilters count={(filter !== "today") + (group !== "none")}>
+        <div className="filters">
+          <div className="seg">
+            {FILTERS.map(([k, l]) => (
+              <button key={k} className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>
+                {l}
+                {k === "submitted" && <span className="seg-count">{submittedCount}</span>}
+              </button>
+            ))}
+          </div>
+          <select value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="none">No grouping</option>
+            <option value="project">Group by project</option>
+            <option value="kr">Group by Key Result</option>
+          </select>
         </div>
-        <select value={group} onChange={(e) => setGroup(e.target.value)}>
-          <option value="none">No grouping</option>
-          <option value="project">Group by project</option>
-          <option value="kr">Group by Key Result</option>
-        </select>
-      </div>
+      </MobileFilters>
 
       {rows.length === 0 ? (
         <div className="empty">No tasks for this filter.</div>

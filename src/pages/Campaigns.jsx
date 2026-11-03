@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { canSeeTab } from "../lib/tabAccess.js";
@@ -295,33 +296,35 @@ export default function Campaigns() {
         <div className="note">No Instantly data yet. Press the refresh button at the top right to run the first sync.</div>
       )}
 
-      <div className="panel ix-bar">
-        <div className="ix-row">
-          <Seg label="View" options={[["overview", "Overview"], ["today", "Today"]]} value={tab} onChange={pickTab} />
+      <MobileFilters count={(preset !== "month") + (region ? 1 : 0)}>
+        <div className="panel ix-bar">
+          <div className="ix-row">
+            <Seg label="View" options={[["overview", "Overview"], ["today", "Today"]]} value={tab} onChange={pickTab} />
+          </div>
+          <div className="ix-row">
+            <span className="ix-lbl">Date range</span>
+            <Seg label="Date range" options={PRESETS} value={preset} onChange={pickPreset} />
+            <label className="ix-date">
+              <span className="ix-lbl">From</span>
+              <input type="date" min="2020-01-01" max="2099-12-31" aria-label="From" value={from || ""}
+                onChange={(e) => pickDate("start", e.target.value, e.target.validity.valid)} />
+            </label>
+            <label className="ix-date">
+              <span className="ix-lbl">To</span>
+              <input type="date" min="2020-01-01" max="2099-12-31" aria-label="To" value={to}
+                onChange={(e) => pickDate("end", e.target.value, e.target.validity.valid)} />
+            </label>
+          </div>
+          <div className="ix-row">
+            <span className="ix-lbl">Region</span>
+            {ready ? (
+              <Seg label="Region" options={[[null, "All regions"], ...v.regionPills.map((r) => [r, r])]} value={region} onChange={setRegion} />
+            ) : (
+              "—"
+            )}
+          </div>
         </div>
-        <div className="ix-row">
-          <span className="ix-lbl">Date range</span>
-          <Seg label="Date range" options={PRESETS} value={preset} onChange={pickPreset} />
-          <label className="ix-date">
-            <span className="ix-lbl">From</span>
-            <input type="date" min="2020-01-01" max="2099-12-31" aria-label="From" value={from || ""}
-              onChange={(e) => pickDate("start", e.target.value, e.target.validity.valid)} />
-          </label>
-          <label className="ix-date">
-            <span className="ix-lbl">To</span>
-            <input type="date" min="2020-01-01" max="2099-12-31" aria-label="To" value={to}
-              onChange={(e) => pickDate("end", e.target.value, e.target.validity.valid)} />
-          </label>
-        </div>
-        <div className="ix-row">
-          <span className="ix-lbl">Region</span>
-          {ready ? (
-            <Seg label="Region" options={[[null, "All regions"], ...v.regionPills.map((r) => [r, r])]} value={region} onChange={setRegion} />
-          ) : (
-            "—"
-          )}
-        </div>
-      </div>
+      </MobileFilters>
 
       {tab === "overview" ? (
         <section>
