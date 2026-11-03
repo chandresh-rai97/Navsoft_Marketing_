@@ -267,6 +267,27 @@ export function AppDataProvider({ children }) {
   // TASK MUTATIONS
   // =========================================================================
 
+  // A recurring task should have at most ONE open occurrence at a time. This
+  // guards the "spawn next occurrence" step so completing or accepting a
+  // recurring task can't create a second open occurrence while one still
+  // exists. Without it, every acceptance spawns a fresh same-title "to submit"
+  // task for the assignee, so an accepted task looks like it keeps coming back
+  // and submit → accept → spawn becomes an endless loop of duplicates.
+  const hasOpenOccurrence = useCallback(
+    (t) =>
+      db.tasks.some(
+        (x) =>
+          x.id !== t.id &&
+          x.assignee_user_id === t.assignee_user_id &&
+          x.project_id === t.project_id &&
+          x.recurrence === t.recurrence &&
+          (x.title || "").trim().toLowerCase() === (t.title || "").trim().toLowerCase() &&
+          x.status !== "done" &&
+          x.status !== "cancelled"
+      ),
+    [db.tasks]
+  );
+
   // Mark a task fully done (+ recurrence spawn). Returns nothing; caller refreshes.
   const markDone = useCallback(
     async (t) => {
@@ -277,7 +298,7 @@ export function AppDataProvider({ children }) {
       };
       const updated = await updateRow("tasks", t.id, patch);
       audit("task", t.id, "completed", null, { on_time: onTime(updated) });
-      if (t.recurrence && t.recurrence !== "none") {
+      if (t.recurrence && t.recurrence !== "none" && !hasOpenOccurrence(t)) {
         const step = t.recurrence === "daily" ? 1 : 7;
         const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
         await insertRow("tasks", {
@@ -302,7 +323,7 @@ export function AppDataProvider({ children }) {
         });
       }
     },
-    [me, audit]
+    [me, audit, hasOpenOccurrence]
   );
 
   // Apply a status transition with DoD gate + acceptance routing.
@@ -485,6 +506,13 @@ export function AppDataProvider({ children }) {
   // the reviewer (project manager, or the admin if the submitter is a manager).
   const submitForReview = useCallback(
     async (id, proofLink = "") => {
+      // Never re-submit a task that was already accepted. Guards against a stale
+      // or duplicate view showing "Submit" on a done task, which would bounce it
+      // back into the reviewer's queue and restart the loop.
+      const cur = db.tasks.find((x) => x.id === id);
+      if (cur && cur.status === "done") {
+        return { ok: false, message: "This task was already accepted and marked Done." };
+      }
       await updateRow("tasks", id, {
         status: "done_pending_acceptance",
         proof_link: proofLink || null,
@@ -495,7 +523,7 @@ export function AppDataProvider({ children }) {
       await refresh();
       return { ok: true };
     },
-    [audit, refresh]
+    [db.tasks, audit, refresh]
   );
 
   // Reviewer accepts → marks the task Done (spawns recurrence if set). The DB
@@ -511,7 +539,7 @@ export function AppDataProvider({ children }) {
         accepted_by_user_id: me.id,
       });
       audit("task", id, "accepted", null, null);
-      if (t.recurrence && t.recurrence !== "none") {
+      if (t.recurrence && t.recurrence !== "none" && !hasOpenOccurrence(t)) {
         const step = t.recurrence === "daily" ? 1 : 7;
         const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
         await insertRow("tasks", {
@@ -528,12 +556,14 @@ export function AppDataProvider({ children }) {
           acceptance_required: t.acceptance_required,
           client_facing: t.client_facing,
           recurrence: t.recurrence,
+          recurrence_config: t.recurrence_config,
+          definition_of_done: (t.definition_of_done || []).map((d) => ({ text: d.text, done: false })),
         });
       }
       await refresh();
       return { ok: true };
     },
-    [db.tasks, canReview, me, audit, refresh]
+    [db.tasks, canReview, me, audit, refresh, hasOpenOccurrence]
   );
 
   // Reviewer requests changes → sends it back with a REQUIRED comment + a
