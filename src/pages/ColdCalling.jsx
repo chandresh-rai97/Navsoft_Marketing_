@@ -47,7 +47,7 @@ function Seg({ options, value, onChange, label }) {
 
 const Sw = ({ c }) => <i className="hs-sw" style={{ background: CAT_COLOR[c] }} />;
 
-function Tile({ label, swatch, value, sub }) {
+function Tile({ label, swatch, value, sub, note }) {
   return (
     <div className="stat">
       <div className="n">{value}</div>
@@ -56,6 +56,7 @@ function Tile({ label, swatch, value, sub }) {
         {label}
       </div>
       <div className="ix-sub">{sub}</div>
+      {note && <div className="ix-sub">{note}</div>}
     </div>
   );
 }
@@ -195,6 +196,19 @@ export default function ColdCalling() {
         (!industry || r.meta.industry === industry)
     );
     const cs = scoped.filter((r) => r.date && r.date >= from && r.date <= to);
+    // Contacts given: follows region / product / industry but not the caller
+    // (contacts have no caller until they're called). Each contact counts once,
+    // under its earliest "Data added on" date; "All time" counts every contact.
+    const given = {};
+    all
+      .filter((r) => (!region || r.meta.region === region) && (!product || r.meta.product === product) && (!industry || r.meta.industry === industry))
+      .forEach((r) => {
+        const g = given[r.key] || (given[r.key] = { added: r.added, dialled: false });
+        if (r.added && (!g.added || r.added < g.added)) g.added = r.added;
+        if (r.date) g.dialled = true;
+      });
+    const givenIn = Object.values(given).filter((g) => preset === "all" || (g.added && g.added >= from && g.added <= to));
+    const contacts = { given: givenIn.length, dialled: givenIn.filter((g) => g.dialled).length };
     const team = summaryRow(cs);
     const names = [...new Set(cs.map((r) => r.caller))].sort();
     const perCaller = names
@@ -218,8 +232,9 @@ export default function ColdCalling() {
       camps: campaignRows(scoped),
       batches: batchRows(scoped),
       chart: chartDays(cs, from, to),
+      contacts,
     };
-  }, [all, caller, region, product, industry, from, to, today]);
+  }, [all, caller, region, product, industry, from, to, today, preset]);
 
   const fuCount = (s) => v.fus.filter((r) => s === "all" || r.status === s).length;
   const fuList = v.fus.filter((r) => fu === "all" || r.status === fu);
@@ -301,6 +316,9 @@ export default function ColdCalling() {
       </div>
 
       <div className="cards hs-tiles">
+        <Tile label="Contacts given" value={dash(fmt(v.contacts.given))}
+          sub={dash(`${fmt(v.contacts.dialled)} dialled · ${fmt(v.contacts.given - v.contacts.dialled)} pending`)}
+          note={caller ? "all callers" : null} />
         <Tile label="Calls made" value={dash(fmt(v.team.calls))} sub={dash(fmt(v.team.leads) + (v.team.leads === 1 ? " lead" : " different leads"))} />
         <Tile label="Connected calls" value={dash(fmt(v.team.connected))}
           sub={dash(`${pct(v.team.connected, v.team.calls)} of calls · ${fmt(v.reached)}${v.reached === 1 ? " lead reached" : " leads reached"}`)} />
