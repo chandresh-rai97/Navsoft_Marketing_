@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import RowTable from "../RowTable.jsx";
 import Modal from "../Modal.jsx";
 import { useApp } from "../../context/AppData.jsx";
 import { parseCSVObjects } from "../../lib/csv.js";
@@ -138,7 +139,7 @@ export default function ImportTasksModal({ onClose }) {
           {summary.skipped.length > 0 ? (
             <div className="panel" style={{ marginBottom: 0 }}>
               <h2>Skipped rows — nothing was changed for these</h2>
-              <table>
+              <RowTable meta={[1, 2]}><table>
                 <thead>
                   <tr>
                     <th style={{ width: 90 }}>Sheet row</th>
@@ -153,7 +154,7 @@ export default function ImportTasksModal({ onClose }) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></RowTable>
             </div>
           ) : (
             <div className="note">Every row imported cleanly — no rows were skipped.</div>

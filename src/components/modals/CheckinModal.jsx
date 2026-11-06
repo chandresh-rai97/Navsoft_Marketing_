@@ -28,7 +28,7 @@ export default function CheckinModal({ krId, onClose }) {
       <div className="row2">
         <div className="field">
           <label>Current value ({k.metric_unit})</label>
-          <input type="number" value={val} onChange={(e) => setVal(e.target.value)} />
+          <input type="number" inputMode="decimal" value={val} onChange={(e) => setVal(e.target.value)} />
         </div>
         <div className="field">
           <label>Confidence</label>

@@ -31,7 +31,7 @@ export default function ScoreModal({ krId, onClose }) {
       <h2>Score KR — {k.title}</h2>
       <div className="field">
         <label>Final score (0.0 – 1.0)</label>
-        <input type="number" step="0.1" min="0" max="1" value={score} onChange={(e) => setScore(e.target.value)} />
+        <input type="number" inputMode="decimal" step="0.1" min="0" max="1" value={score} onChange={(e) => setScore(e.target.value)} />
         <div className="hint">0.7+ is typically "achieved" for a committed KR; stretch KRs grade more leniently.</div>
       </div>
       <div className="field">

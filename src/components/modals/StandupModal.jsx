@@ -76,8 +76,12 @@ export default function StandupModal({ onClose }) {
         <div className="hint" style={{ marginTop: 0, marginBottom: 6 }}>
           Unticked items above stay on today automatically. Add anything new below.
         </div>
+        <label className="sr-only phone-label" htmlFor="su-new">Add a task for today</label>
         <div style={{ display: "flex", gap: 6 }}>
           <input
+            id="su-new"
+            autoCapitalize="sentences"
+            enterKeyHint="done"
             placeholder="Add a task for today"
             value={newTitle}
             style={{ flex: 1 }}

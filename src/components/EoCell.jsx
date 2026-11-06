@@ -10,6 +10,8 @@ export default function EoCell({ value, canEdit, onCommit }) {
       className="eo-in"
       type="number"
       step="any"
+      inputMode="decimal"
+      enterKeyHint="done"
       key={value === null || value === undefined ? "empty" : String(value)}
       defaultValue={value === null || value === undefined ? "" : value}
       onBlur={(e) => {

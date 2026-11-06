@@ -170,6 +170,10 @@ export default function TaskModal({ id, onClose }) {
           <div className="field" style={{ marginBottom: 8 }}>
             <label>Task proof (link)</label>
             <input
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              enterKeyHint="send"
               value={proofLink}
               onChange={(e) => setProofLink(e.target.value)}
               placeholder="Paste a link to your work (doc, drive, PR…)"
@@ -188,11 +192,11 @@ export default function TaskModal({ id, onClose }) {
 
       <div className="field">
         <label>Title</label>
-        <input value={form.title} disabled={readOnly} onChange={(e) => set("title", e.target.value)} placeholder="What needs doing?" />
+        <input value={form.title} disabled={readOnly} onChange={(e) => set("title", e.target.value)} placeholder="What needs doing?" autoCapitalize="sentences" enterKeyHint="next" />
       </div>
       <div className="field">
         <label>Description</label>
-        <textarea value={form.description} disabled={readOnly} onChange={(e) => set("description", e.target.value)} />
+        <textarea value={form.description} disabled={readOnly} onChange={(e) => set("description", e.target.value)} autoCapitalize="sentences" />
       </div>
       <div className="row2">
         <div className="field">
@@ -325,14 +329,19 @@ export default function TaskModal({ id, onClose }) {
               <input type="checkbox" checked={d.done} disabled={readOnly} onChange={(e) => setDod((arr) => arr.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)))} />
               <span style={{ flex: 1 }}>{d.text}</span>
               {!readOnly && (
-                <span className="danger-link" onClick={() => setDod((arr) => arr.filter((_, j) => j !== i))}>remove</span>
+                <button type="button" className="danger-link" onClick={() => setDod((arr) => arr.filter((_, j) => j !== i))}>remove</button>
               )}
             </div>
           ))}
         </div>
         {!readOnly && (
+          <>
+          <label className="sr-only phone-label" htmlFor="tm-dod-new">Add a checklist item</label>
           <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
             <input
+              id="tm-dod-new"
+              autoCapitalize="sentences"
+              enterKeyHint="done"
               placeholder="Add a checklist item"
               value={newDod}
               style={{ flex: 1 }}
@@ -341,12 +350,19 @@ export default function TaskModal({ id, onClose }) {
             />
             <button className="btn sm ghost" onClick={() => { if (!newDod.trim()) return; setDod((a) => [...a, { text: newDod.trim(), done: false }]); setNewDod(""); }}>Add</button>
           </div>
+          </>
         )}
       </div>
 
+      {/* Phones: "Cancel task" sits here, away from Save/Close in the bottom bar. */}
+      {editing && canWrite && (
+        <div className="phone-only tm-danger">
+          <button className="danger-link" onClick={handleCancelTask}>Cancel task</button>
+        </div>
+      )}
       <div className="modal-actions">
         {editing && canWrite && (
-          <button className="danger-link" onClick={handleCancelTask}>Cancel task</button>
+          <button className="danger-link hide-phone" onClick={handleCancelTask}>Cancel task</button>
         )}
         <div style={{ flex: 1 }} />
         <button className="btn ghost" onClick={onClose}>Close</button>

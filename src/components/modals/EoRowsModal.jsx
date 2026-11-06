@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import RowTable from "../RowTable.jsx";
 import Modal from "../Modal.jsx";
 import { useApp } from "../../context/AppData.jsx";
 import { useDialog } from "../Dialog.jsx";
@@ -35,7 +36,7 @@ function SectionEditor({ section, projectId }) {
   return (
     <div className="panel" style={{ marginBottom: 12 }}>
       <h2>{section === "effort" ? "EFFORT metrics" : "OUTCOME metrics"}</h2>
-      <table>
+      <RowTable stack><table>
         <thead>
           <tr>
             <th>Metric</th>
@@ -84,6 +85,9 @@ function SectionEditor({ section, projectId }) {
           <tr>
             <td>
               <input
+                aria-label="New metric name"
+                autoCapitalize="sentences"
+                enterKeyHint="done"
                 placeholder="New metric name"
                 value={nw.name}
                 style={{ width: "100%", padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 5 }}
@@ -93,6 +97,7 @@ function SectionEditor({ section, projectId }) {
             </td>
             <td>
               <input
+                aria-label="Unit"
                 value={nw.unit}
                 style={{ width: 60, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 5 }}
                 onChange={(e) => setNw({ ...nw, unit: e.target.value })}
@@ -115,7 +120,7 @@ function SectionEditor({ section, projectId }) {
             </td>
           </tr>
         </tbody>
-      </table>
+      </table></RowTable>
     </div>
   );
 }

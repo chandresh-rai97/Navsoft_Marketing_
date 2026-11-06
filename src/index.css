@@ -263,6 +263,8 @@ tr.clk { cursor: pointer; }
 .overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 18px; }
 .modal { background: var(--surface-raised); border-radius: 13px; padding: 24px; width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 .modal.wide { width: 680px; }
+.modal:focus, .sheet:focus { outline: none; }
+.modal-bar, .phone-only { display: none; }
 .modal h2 { color: var(--text-head); margin: 0 0 15px; font-size: 17px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; align-items: center; }
 .row2 { display: flex; gap: 10px; flex-wrap: wrap; } .row2 > * { flex: 1; min-width: 130px; }
@@ -662,6 +664,18 @@ tr.clk { cursor: pointer; }
 
   /* ---- pop-ups and forms: full screen, main button fixed at the bottom ---- */
   .overlay { padding: 0; align-items: stretch; }
+  /* stay above the on-screen keyboard (iOS) */
+  .overlay, .sheet-overlay, .mf-overlay { bottom: var(--kb, 0px); }
+  .modal-bar { display: flex; position: sticky; top: calc(-18px - env(safe-area-inset-top)); z-index: 3; align-items: center;
+    margin: calc(-18px - env(safe-area-inset-top)) calc(-1 * max(16px, env(safe-area-inset-left))) 6px;
+    padding: env(safe-area-inset-top) 4px 0; min-height: calc(52px + env(safe-area-inset-top)); background: var(--surface-raised); border-bottom: 1px solid var(--hairline); }
+  .modal-back { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 10px; color: var(--ink); cursor: pointer; }
+  .modal-back:active { background: var(--paper-2); }
+  .modal-bar + h2 { margin-top: 10px; }
+  .phone-only { display: block; }
+  .phone-label.sr-only { position: static; width: auto; height: auto; margin: 10px 0 5px; overflow: visible; clip: auto; white-space: normal;
+    font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .tm-danger { margin: 18px 0 4px; padding-top: 14px; border-top: 1px solid var(--hairline); }
   .modal, .modal.wide { width: 100% !important; max-width: none; height: 100%; max-height: none; border-radius: 0;
     padding: calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); overflow-y: auto; }
   .modal > .modal-actions:last-child { position: sticky; bottom: 0; z-index: 2; margin: 16px calc(-1 * max(16px, env(safe-area-inset-left))) 0;

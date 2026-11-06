@@ -50,7 +50,7 @@ export default function Login() {
         {mode === "signup" && (
           <div className="field">
             <label>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" autoCapitalize="words" enterKeyHint="next" />
           </div>
         )}
         <div className="field">
@@ -58,6 +58,9 @@ export default function Login() {
           <input
             type="email"
             autoComplete="username"
+            inputMode="email"
+            autoCapitalize="none"
+            enterKeyHint="next"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@team.com"
@@ -69,6 +72,7 @@ export default function Login() {
           <input
             type="password"
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            enterKeyHint={mode === "signup" ? "next" : "go"}
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             placeholder="Enter your password"
@@ -80,6 +84,8 @@ export default function Login() {
             <label>Confirm password</label>
             <input
               type="password"
+              autoComplete="new-password"
+              enterKeyHint="go"
               value={pw2}
               onChange={(e) => setPw2(e.target.value)}
               placeholder="Re-enter password"

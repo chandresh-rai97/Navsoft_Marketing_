@@ -45,6 +45,8 @@ export default function MyWeek() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="The one outcome that matters most this week"
+              autoCapitalize="sentences"
+              enterKeyHint="done"
               onKeyDown={(e) => e.key === "Enter" && add()}
             />
           </div>

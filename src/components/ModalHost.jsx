@@ -23,7 +23,7 @@ export const useModals = () => useContext(ModalCtx);
 export function ModalHost({ children }) {
   const [m, setM] = useState(null);
   const nav = useNav();
-  const { db } = useApp();
+  const { db, me, seesAll, taskCollaboratorIds } = useApp();
   const dlg = useDialog();
   // The open task lives in the URL (?task=<id> or ?task=new), so refresh and
   // shared links reopen it and Back closes it.
@@ -31,7 +31,12 @@ export function ModalHost({ children }) {
   navRef.current = nav;
   const taskParam = nav.task;
   const taskId = taskParam && taskParam !== "new" ? taskParam : null;
-  const taskMissing = !!taskId && !db.tasks.some((t) => t.id === taskId);
+  const linked = taskId ? db.tasks.find((t) => t.id === taskId) : null;
+  // Not there, or not yours to see (same rule as the task view itself).
+  const taskMissing =
+    !!taskId &&
+    (!linked ||
+      (!seesAll() && linked.assignee_user_id !== me?.id && !taskCollaboratorIds(linked.id).includes(me?.id)));
   useEffect(() => {
     if (!taskMissing) return;
     navRef.current.closeTask();

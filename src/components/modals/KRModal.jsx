@@ -69,15 +69,15 @@ export default function KRModal({ objId, onClose }) {
       <div className="row2">
         <div className="field">
           <label>Start</label>
-          <input type="number" value={f.start_value} onChange={(e) => set("start_value", e.target.value)} />
+          <input type="number" inputMode="decimal" value={f.start_value} onChange={(e) => set("start_value", e.target.value)} />
         </div>
         <div className="field">
           <label>Target</label>
-          <input type="number" value={f.target_value} onChange={(e) => set("target_value", e.target.value)} />
+          <input type="number" inputMode="decimal" value={f.target_value} onChange={(e) => set("target_value", e.target.value)} />
         </div>
         <div className="field">
           <label>Current</label>
-          <input type="number" value={f.current_value} onChange={(e) => set("current_value", e.target.value)} />
+          <input type="number" inputMode="decimal" value={f.current_value} onChange={(e) => set("current_value", e.target.value)} />
         </div>
       </div>
       <div className="row2">

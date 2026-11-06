@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import RowTable from "../RowTable.jsx";
 import Modal from "../Modal.jsx";
 import { useApp } from "../../context/AppData.jsx";
 import { parseCSVObjects, downloadText } from "../../lib/csv.js";
@@ -90,10 +91,10 @@ export default function ImportEoModal({ onClose }) {
           {summary.skipped.length > 0 ? (
             <div className="panel" style={{ marginBottom: 0 }}>
               <h2>Skipped rows — nothing was changed for these</h2>
-              <table>
+              <RowTable meta={[1, 2]}><table>
                 <thead><tr><th style={{ width: 90 }}>Row</th><th>Why</th></tr></thead>
                 <tbody>{summary.skipped.map((s, i) => (<tr key={i}><td>Row {s.row}</td><td>{s.reason}</td></tr>))}</tbody>
-              </table>
+              </table></RowTable>
             </div>
           ) : (
             <div className="note">Every row imported cleanly.</div>
