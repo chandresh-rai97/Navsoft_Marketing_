@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AccessPanel } from "../components/TabAccess.jsx";
+import TopBar from "../components/TopBar.jsx";
 import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
@@ -127,7 +129,7 @@ function FollowupChart({ keys, by, monthly }) {
                 acc += v;
                 return r;
               })}
-              <rect x={L + i * bw} width={bw} y={T} height={H - B - T} fill="transparent" onMouseMove={(e) => move(e, k)} onMouseLeave={() => setTip(null)} />
+              <rect x={L + i * bw} width={bw} y={T} height={H - B - T} fill="transparent" onMouseMove={(e) => move(e, k)} onClick={(e) => move(e, k)} onMouseLeave={() => setTip(null)} />
               {i % every === 0 && (
                 <text x={L + i * bw + bw / 2} y={H - 6} textAnchor="middle" fontSize="11" fill="var(--muted)">
                   {label(k)}
@@ -162,6 +164,7 @@ export default function HubSpotActivity() {
   const [syncErr, setSyncErr] = useState("");
 
   const { me, db } = useApp();
+  const [accessOpen, setAccessOpen] = useState(false);
   const allowed = canSeeTab("hubspot", me, db);
   const reload = useCallback(async () => {
     if (!allowed) return; // only load when this user can see the tab
@@ -273,10 +276,10 @@ export default function HubSpotActivity() {
         {syncMsg && <div className="ix-sub">{syncMsg}</div>}
         {syncErr && <div className="ix-sub ix-red">{syncErr}</div>}
       </div>
-      <TabAccessButton tabKey="hubspot_team_activity" />
+      <TabAccessButton tabKey="hubspot_team_activity" className="hide-phone" />
       <button
         type="button"
-        className="btn sm ghost ix-refresh"
+        className="btn sm ghost ix-refresh hide-phone"
         onClick={refresh}
         disabled={syncing}
         title={syncing ? "Refreshing…" : "Refresh now"}
@@ -287,8 +290,21 @@ export default function HubSpotActivity() {
     </div>
   );
 
+  const topBar = (
+    <TopBar
+      icons={
+        <button type="button" className="mtop-btn" onClick={refresh} disabled={syncing} aria-label={syncing ? "Refreshing" : "Refresh now"}>
+          <RefreshIcon spinning={syncing} />
+        </button>
+      }
+      menu={[me?.role === "admin" && { label: "Who can see this tab", onClick: () => setAccessOpen(true) }]}
+    />
+  );
+
   return (
     <div className="hs">
+      {topBar}
+      {accessOpen && <AccessPanel tabKey="hubspot_team_activity" onClose={() => setAccessOpen(false)} />}
       <PageHead
         title="HubSpot Team Activity"
         sub="Follow-ups, tasks and neglected deals across the sales team, from HubSpot"
@@ -300,7 +316,13 @@ export default function HubSpotActivity() {
         <div className="note">No HubSpot data yet. Press the refresh button at the top right to run the first sync.</div>
       )}
 
-      <MobileFilters count={(preset !== "month") + (person ? 1 : 0)}>
+      <MobileFilters
+        count={(preset !== "month") + (person ? 1 : 0)}
+        chips={[
+          preset !== "month" && { label: preset === "custom" ? `${from} – ${to}` : (PRESETS.find(([k]) => k === preset) || [, preset])[1], clear: () => pickPreset("month") },
+          person && { label: (people.find(([k]) => k === person) || [, "Person"])[1], clear: () => setPerson(null) },
+        ]}
+      >
         <div className="panel hs-filters">
           <div className="hs-row" role="group" aria-label="Date range">
             <span className="ix-lbl hs-flabel">Date range</span>
@@ -438,7 +460,7 @@ export default function HubSpotActivity() {
       <div className="panel hs-card">
         <div className="hs-head">
           <h2>{v.chart.monthly ? "Follow-ups per month" : "Follow-ups per day"}</h2>
-          <span>Hover a bar for the breakdown</span>
+          <span><span className="hide-phone">Hover</span><span className="phone-inline">Tap</span> a bar for the breakdown</span>
         </div>
         {ready ? <FollowupChart keys={v.chart.keys} by={v.chart.by} monthly={v.chart.monthly} /> : <div className="hs-empty">—</div>}
         <div className="hs-legend">

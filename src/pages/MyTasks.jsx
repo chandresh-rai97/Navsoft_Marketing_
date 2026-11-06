@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import TopBar from "../components/TopBar.jsx";
 import Fab from "../components/Fab.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
@@ -74,7 +75,7 @@ export default function MyTasks() {
         sub="Everything assigned to you. Filter by time, group by project or Key Result."
         actions={
           <>
-            <button className="btn ghost" onClick={() => modals.openImport()}>
+            <button className="btn ghost hide-phone" onClick={() => modals.openImport()}>
               Import from spreadsheet
             </button>
             <button className="btn hide-phone" onClick={() => modals.openTask(null)}>
@@ -84,7 +85,14 @@ export default function MyTasks() {
         }
       />
       <Fab label="New task" onClick={() => modals.openTask(null)} />
-      <MobileFilters count={(filter !== "today") + (group !== "none")}>
+      <TopBar menu={[{ label: "Import from spreadsheet", onClick: () => modals.openImport() }]} />
+      <MobileFilters
+        count={(filter !== "today") + (group !== "none")}
+        chips={[
+          filter !== "today" && { label: (FILTERS.find(([k]) => k === filter) || [, filter])[1], clear: () => setFilter("today") },
+          group !== "none" && { label: group === "project" ? "Grouped by project" : "Grouped by Key Result", clear: () => setGroup("none") },
+        ]}
+      >
         <div className="filters">
           <div className="seg">
             {FILTERS.map(([k, l]) => (

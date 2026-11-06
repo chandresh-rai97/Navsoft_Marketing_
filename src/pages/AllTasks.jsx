@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import TopBar from "../components/TopBar.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useNav } from "../context/Nav.jsx";
 import { useModals } from "../components/ModalHost.jsx";
@@ -205,14 +206,25 @@ export default function AllTasks() {
         sub="Every task across every person. Filter, then open any task to edit, reschedule, or reassign."
         actions={
           isAdmin() && (
-            <button className="btn ghost" onClick={downloadCsv}>
+            <button className="btn ghost hide-phone" onClick={downloadCsv}>
               Download CSV
             </button>
           )
         }
       />
 
-      <MobileFilters count={Object.values(f).filter(Boolean).length + (dateF.op ? 1 : 0)}>
+      <TopBar menu={[isAdmin() && { label: "Download CSV", onClick: downloadCsv }]} />
+      <MobileFilters
+        count={Object.values(f).filter(Boolean).length + (dateF.op ? 1 : 0)}
+        chips={[
+          f.assignee && { label: uname(f.assignee), clear: () => set("assignee", "") },
+          f.status && { label: STATUS_LABEL[f.status] || f.status, clear: () => set("status", "") },
+          f.project && { label: pname(f.project), clear: () => set("project", "") },
+          f.kr && { label: "KR: " + (db.keyResults.find((k) => k.id === f.kr)?.title || "…"), clear: () => set("kr", "") },
+          f.quick && { label: { overdue: "Overdue", blocked: "Blocked", carried: "Pushed 3+×" }[f.quick], clear: () => set("quick", "") },
+          dateF.op && { label: "Date filter", clear: () => setDateF({ field: dateF.field, op: "", v1: "", v2: "" }) },
+        ]}
+      >
         <div className="filters">
           <select value={f.assignee} onChange={(e) => set("assignee", e.target.value)}>
             <option value="">All people</option>

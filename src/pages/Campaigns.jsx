@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AccessPanel } from "../components/TabAccess.jsx";
+import TopBar from "../components/TopBar.jsx";
 import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
@@ -142,6 +144,7 @@ function TrendChart({ days }) {
             rx={Math.min(4, bw / 2)}
             fill="var(--accent-text)"
             onMouseMove={(e) => move(e, d)}
+            onClick={(e) => move(e, d)}
             onMouseLeave={() => setTip(null)}
           />
         ))}
@@ -169,6 +172,7 @@ export default function Campaigns() {
   const [syncErr, setSyncErr] = useState("");
 
   const { me, db } = useApp();
+  const [accessOpen, setAccessOpen] = useState(false);
   const allowed = canSeeTab("campaigns", me, db);
   const reload = useCallback(async () => {
     if (!allowed) return; // only load when this user can see the tab
@@ -265,10 +269,10 @@ export default function Campaigns() {
         {syncMsg && <div className="ix-sub">{syncMsg}</div>}
         {syncErr && <div className="ix-sub ix-red">{syncErr}</div>}
       </div>
-      <TabAccessButton tabKey="campaigns" />
+      <TabAccessButton tabKey="campaigns" className="hide-phone" />
       <button
         type="button"
-        className="btn sm ghost ix-refresh"
+        className="btn sm ghost ix-refresh hide-phone"
         onClick={refresh}
         disabled={syncing}
         title={syncing ? "Refreshing…" : "Refresh from Instantly"}
@@ -279,8 +283,22 @@ export default function Campaigns() {
     </div>
   );
 
+  // Phones: refresh in the top bar; "Who can see this tab" (admins) in its ⋯ menu.
+  const topBar = (
+    <TopBar
+      icons={
+        <button type="button" className="mtop-btn" onClick={refresh} disabled={syncing} aria-label={syncing ? "Refreshing" : "Refresh from Instantly"}>
+          <RefreshIcon spinning={syncing} />
+        </button>
+      }
+      menu={[me?.role === "admin" && { label: "Who can see this tab", onClick: () => setAccessOpen(true) }]}
+    />
+  );
+
   return (
     <div className="ix">
+      {topBar}
+      {accessOpen && <AccessPanel tabKey="campaigns" onClose={() => setAccessOpen(false)} />}
       <PageHead
         title="Instantly campaigns by region"
         sub={
@@ -298,7 +316,13 @@ export default function Campaigns() {
         <div className="note">No Instantly data yet. Press the refresh button at the top right to run the first sync.</div>
       )}
 
-      <MobileFilters count={(preset !== "month") + (region ? 1 : 0)}>
+      <MobileFilters
+        count={(preset !== "month") + (region ? 1 : 0)}
+        chips={[
+          preset !== "month" && { label: preset === "custom" ? `${from} – ${to}` : (PRESETS.find(([k]) => k === preset) || [, preset])[1], clear: () => pickPreset("month") },
+          region && { label: region, clear: () => setRegion(null) },
+        ]}
+      >
         <div className="panel ix-bar">
           <div className="ix-row">
             <Seg label="View" options={[["overview", "Overview"], ["today", "Today"]]} value={tab} onChange={pickTab} />
@@ -375,7 +399,7 @@ export default function Campaigns() {
 
           <div className="ix-sec">
             <h2>Emails sent per day</h2>
-            <p>Hover a bar for that day's sends and replies</p>
+            <p><span className="hide-phone">Hover</span><span className="phone-inline">Tap</span> a bar for that day's sends and replies</p>
             <div className="panel">{ready ? <TrendChart days={v.trend} /> : "—"}</div>
           </div>
 

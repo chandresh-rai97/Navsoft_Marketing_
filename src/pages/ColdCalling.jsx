@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AccessPanel } from "../components/TabAccess.jsx";
+import TopBar from "../components/TopBar.jsx";
 import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
@@ -131,7 +133,7 @@ function CallsChart({ days, by }) {
                 acc += v;
                 return r;
               })}
-              <rect x={L + i * bw} width={bw} y={T} height={H - B - T} fill="transparent" onMouseMove={(e) => move(e, d)} onMouseLeave={() => setTip(null)} />
+              <rect x={L + i * bw} width={bw} y={T} height={H - B - T} fill="transparent" onMouseMove={(e) => move(e, d)} onClick={(e) => move(e, d)} onMouseLeave={() => setTip(null)} />
               {i % every === 0 && (
                 <text x={L + i * bw + bw / 2} y={H - 6} textAnchor="middle" fontSize="11" fill="var(--muted)">{nice(d)}</text>
               )}
@@ -150,6 +152,7 @@ function CallsChart({ days, by }) {
 
 export default function ColdCalling() {
   const { me, db } = useApp();
+  const [accessOpen, setAccessOpen] = useState(false);
   const allowed = canSeeTab("coldcalling", me, db);
   const [data, setData] = useState(null);
   const [loadErr, setLoadErr] = useState("");
@@ -255,16 +258,33 @@ export default function ColdCalling() {
 
   const header = (
     <div className="ix-updated">
-      <div>Last received from sheet: {data ? fmtUpdated(data.lastReceived) : "—"}</div>
-      <TabAccessButton tabKey="cold_calling" />
-      <button type="button" className="btn sm ghost ix-refresh" onClick={reload} disabled={loading} title={REFRESH_TIP} aria-label="Reload from Cadence">
+      <div>
+        <div>Last received from sheet: {data ? fmtUpdated(data.lastReceived) : "—"}</div>
+        {/* phones have no hover: the refresh button's tip is shown as text */}
+        <div className="phone-only ix-sub">{REFRESH_TIP}</div>
+      </div>
+      <TabAccessButton tabKey="cold_calling" className="hide-phone" />
+      <button type="button" className="btn sm ghost ix-refresh hide-phone" onClick={reload} disabled={loading} title={REFRESH_TIP} aria-label="Reload from Cadence">
         <span className={loading ? "ix-spin" : ""} style={{ display: "inline-flex" }}><RefreshIcon /></span>
       </button>
     </div>
   );
 
+  const topBar = (
+    <TopBar
+      icons={
+        <button type="button" className="mtop-btn" onClick={reload} disabled={loading} aria-label="Reload from Cadence">
+          <span className={loading ? "ix-spin" : ""} style={{ display: "inline-flex" }}><RefreshIcon /></span>
+        </button>
+      }
+      menu={[me?.role === "admin" && { label: "Who can see this tab", onClick: () => setAccessOpen(true) }]}
+    />
+  );
+
   return (
     <div className="hs cc">
+      {topBar}
+      {accessOpen && <AccessPanel tabKey="cold_calling" onClose={() => setAccessOpen(false)} />}
       <PageHead
         title="Cold Calling Activity"
         sub="Calls, outcomes and follow-ups from the sales team’s call log, plus the data team’s lead batches"
@@ -282,7 +302,16 @@ export default function ColdCalling() {
         </div>
       )}
 
-      <MobileFilters count={(preset !== "all") + [caller, region, product, industry].filter(Boolean).length}>
+      <MobileFilters
+        count={(preset !== "all") + [caller, region, product, industry].filter(Boolean).length}
+        chips={[
+          preset !== "all" && { label: preset === "custom" ? `${from} – ${to}` : (PRESETS.find(([k]) => k === preset) || [, preset])[1], clear: () => setPreset("all") },
+          caller && { label: caller, clear: () => setCaller(null) },
+          region && { label: region, clear: () => setRegion(null) },
+          product && { label: product, clear: () => setProduct("") },
+          industry && { label: industry, clear: () => setIndustry("") },
+        ]}
+      >
         <div className="panel hs-filters">
           <div className="hs-row" role="group" aria-label="Date range">
             <span className="ix-lbl hs-flabel">Call date</span>
@@ -397,7 +426,7 @@ export default function ColdCalling() {
         <div className="panel hs-card">
           <div className="hs-head">
             <h2>Calls per day</h2>
-            <span>Hover a bar for the breakdown</span>
+            <span><span className="hide-phone">Hover</span><span className="phone-inline">Tap</span> a bar for the breakdown</span>
           </div>
           {ready ? <CallsChart days={v.chart.days} by={v.chart.by} /> : <div className="hs-empty">—</div>}
           <div className="hs-legend">

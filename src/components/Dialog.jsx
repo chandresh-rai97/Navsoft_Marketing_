@@ -35,8 +35,15 @@ export function DialogProvider({ children }) {
       {children}
       {dlg && (
         <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close(dlg.kind === "confirm" ? false : dlg.kind === "prompt" ? null : undefined)}>
-          <div className="modal" style={{ width: 400 }} onMouseDown={(e) => e.stopPropagation()}>
-            <p style={{ fontSize: 14, lineHeight: 1.55, margin: "0 0 16px" }}>{dlg.message}</p>
+          <div
+            className="modal dlg"
+            style={{ width: 400 }}
+            role={dlg.kind === "prompt" ? "dialog" : "alertdialog"}
+            aria-modal="true"
+            aria-describedby="dlg-msg"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p id="dlg-msg" style={{ fontSize: 14, lineHeight: 1.55, margin: "0 0 16px" }}>{dlg.message}</p>
             {dlg.kind === "prompt" && (
               <textarea
                 autoFocus

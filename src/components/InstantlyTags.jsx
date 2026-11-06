@@ -86,6 +86,13 @@ export default function InstantlyTags() {
                 <td><code>({tag})</code></td>
                 <td title={names.join("\n")}>
                   {names.length} · <span style={{ color: "var(--muted)" }}>{names[0]}{names.length > 1 ? "…" : ""}</span>
+                  {/* phones have no hover: the full list is one tap away */}
+                  {names.length > 1 && (
+                    <details className="phone-only tag-names">
+                      <summary>Show all {names.length}</summary>
+                      <ul>{names.map((n) => <li key={n}>{n}</li>)}</ul>
+                    </details>
+                  )}
                 </td>
                 <td>
                   <select

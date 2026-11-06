@@ -157,7 +157,6 @@ export default function Layout({ view, arg, navigate, children }) {
           </button>
         )}
         <span className={"mtop-title" + (atRoot ? " at-root" : "")} aria-hidden="true">{title}</span>
-        <div className="mtop-actions" id="mtop-actions" />
         {showBell && (
           <button
             type="button"
@@ -170,6 +169,7 @@ export default function Layout({ view, arg, navigate, children }) {
             {unreadCount > 0 && <span className="mtop-badge" aria-hidden="true">{unreadCount}</span>}
           </button>
         )}
+        <div className="mtop-actions" id="mtop-actions" />
       </header>
       <nav className="side" aria-label="Main menu">
         <img className="brand-logo" src="/brand/navai-lockup-light.png" alt="NavAI" />

@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useIsMobile } from "../hooks/useIsMobile.js";
+import Sheet from "../components/Sheet.jsx";
+import TopBar from "../components/TopBar.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useDialog } from "../components/Dialog.jsx";
@@ -186,6 +189,13 @@ function DashboardView({ db, channels }) {
           </table>
         </div>
       )}
+      {/* Phones: one-line key for the coloured Attain % cells (each cell also shows its %). */}
+      <div className="eo-legend phone-only" aria-label="Colour key for Attain %">
+        <span>Attain %:</span>
+        <span className="sw eo-green">100%+ on target</span>
+        <span className="sw eo-yellow">80–99% close</span>
+        <span className="sw eo-red">under 80% behind</span>
+      </div>
       <div className="sub" style={{ marginTop: 10 }}>
         Rolls up from each channel's monthly numbers (which themselves roll up from weeks where weekly data exists).
         Blue ≥ 100%, orange 80–99%, red &lt; 80%.
@@ -353,7 +363,7 @@ function ChannelView({ projectId, canEdit }) {
         {orderedCfg.map((c) => (
           <td key={c.key} className={"eo-sticky" + (c.key === "name" ? " eo-metricname" : "")} style={cfgStyle(c)}>
             {c.key === "name" ? (
-              <span>{m.name}{canEdit && <span className="eo-xbtn" title="Remove metric" onClick={() => removeRow(m)}>×</span>}</span>
+              <span>{m.name}{canEdit && <span className="eo-xbtn hide-phone" title="Remove metric" onClick={() => removeRow(m)}>×</span>}</span>
             ) : configValue(m, c.key)}
           </td>
         ))}
@@ -372,7 +382,7 @@ function ChannelView({ projectId, canEdit }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div className="eo-cols">
-            <button className="btn sm ghost" onClick={() => setShowCols((v) => !v)}>⚙ Columns</button>
+            <button className="btn sm ghost hide-phone" onClick={() => setShowCols((v) => !v)}>⚙ Columns</button>
             {showCols && <ColumnsMenu prefs={prefs} setPrefs={setPrefs} close={() => setShowCols(false)} />}
           </div>
           {canEdit && gran === "month" && (
@@ -395,8 +405,15 @@ function ChannelView({ projectId, canEdit }) {
               <button className="btn sm" onClick={addWeek}>+ Add week</button>
             </>
           )}
-          {canEdit && <button className="btn sm ghost" onClick={() => modals.openEoImport()}>Import data</button>}
-          {canEdit && <button className="btn sm ghost" onClick={() => modals.openEoRows(projectId)}>✏️ Manage rows</button>}
+          {canEdit && <button className="btn sm ghost hide-phone" onClick={() => modals.openEoImport()}>Import data</button>}
+          {canEdit && <button className="btn sm ghost hide-phone" onClick={() => modals.openEoRows(projectId)}>✏️ Manage rows</button>}
+          <TopBar
+            menu={[
+              { label: "Columns (show / hide)", onClick: () => setShowCols(true) },
+              canEdit && { label: "Import data", onClick: () => modals.openEoImport() },
+              canEdit && { label: "Manage rows", onClick: () => modals.openEoRows(projectId) },
+            ]}
+          />
         </div>
       </div>
 
@@ -434,16 +451,23 @@ function ChannelView({ projectId, canEdit }) {
               </tr>
             </thead>
             <tbody>
-              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>EFFORT — activities &amp; output the team produces</td></tr>
+              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><span className="eo-secname">EFFORT — activities &amp; output the team produces</span></td></tr>
               {renderRows("effort")}
               {canEdit && (<tr className="eo-addrow"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><button className="linkbtn" onClick={() => addRow("effort")}>＋ Add effort metric</button></td></tr>)}
-              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}>OUTCOME — results &amp; impact those activities drive</td></tr>
+              <tr className="eo-section"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><span className="eo-secname">OUTCOME — results &amp; impact those activities drive</span></td></tr>
               {renderRows("outcome")}
               {canEdit && (<tr className="eo-addrow"><td className="eo-sticky" style={{ left: 0 }} colSpan={totalCols}><button className="linkbtn" onClick={() => addRow("outcome")}>＋ Add outcome metric</button></td></tr>)}
             </tbody>
           </table>
         </div>
       )}
+      {/* Phones: one-line key for the coloured Attain % cells (each cell also shows its %). */}
+      <div className="eo-legend phone-only" aria-label="Colour key for Attain %">
+        <span>Attain %:</span>
+        <span className="sw eo-green">100%+ on target</span>
+        <span className="sw eo-yellow">80–99% close</span>
+        <span className="sw eo-red">under 80% behind</span>
+      </div>
       <div className="sub" style={{ marginTop: 10 }}>
         {gran === "week"
           ? "Weekly entry: Base Target & Achieved per week; Carried In chains from the previous week (and the last week of a month into the first week of the next). The month rolls up from its weeks."
@@ -455,7 +479,8 @@ function ChannelView({ projectId, canEdit }) {
 }
 
 function ColumnsMenu({ prefs, setPrefs, close }) {
-  useBackClose(true, close);
+  const mobile = useIsMobile();
+  useBackClose(!mobile, close); // on phones the Sheet handles Back
   const pins = new Set([...(prefs.pins || []), "name"]);
   const hiddenCfg = new Set(prefs.hiddenCfg || []);
   const hiddenSub = new Set(prefs.hiddenSub || []);
@@ -464,8 +489,8 @@ function ColumnsMenu({ prefs, setPrefs, close }) {
     cur.has(key) ? cur.delete(key) : cur.add(key);
     setPrefs({ ...prefs, [setName]: [...cur] });
   };
-  return (
-    <div className="eo-colsmenu" onMouseLeave={close}>
+  const body = (
+    <>
       <h4>Freeze columns</h4>
       {CONFIG_COLS.map((c) => (
         <label key={c.key}>
@@ -486,6 +511,19 @@ function ColumnsMenu({ prefs, setPrefs, close }) {
           <input type="checkbox" checked={!hiddenSub.has(s.key)} onChange={() => toggle("hiddenSub", s.key)} />{s.label}
         </label>
       ))}
+    </>
+  );
+  // Phones: a bottom sheet (Close button, Back closes it). Desktop: the dropdown.
+  if (mobile) {
+    return (
+      <Sheet title="Columns" onClose={close}>
+        <div className="eo-colsmenu in-sheet">{body}</div>
+      </Sheet>
+    );
+  }
+  return (
+    <div className="eo-colsmenu" onMouseLeave={close}>
+      {body}
     </div>
   );
 }

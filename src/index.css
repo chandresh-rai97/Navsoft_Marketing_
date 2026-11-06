@@ -264,7 +264,7 @@ tr.clk { cursor: pointer; }
 .modal { background: var(--surface-raised); border-radius: 13px; padding: 24px; width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 .modal.wide { width: 680px; }
 .modal:focus, .sheet:focus { outline: none; }
-.modal-bar, .phone-only { display: none; }
+.modal-bar, .phone-only, .phone-inline { display: none; }
 .modal h2 { color: var(--text-head); margin: 0 0 15px; font-size: 17px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; align-items: center; }
 .row2 { display: flex; gap: 10px; flex-wrap: wrap; } .row2 > * { flex: 1; min-width: 130px; }
@@ -625,6 +625,32 @@ tr.clk { cursor: pointer; }
   .sheet-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px; }
   .sheet-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hairline); }
   .sheet-foot .btn { width: 100%; min-height: 48px; font-size: 16px; }
+  /* ⋯ menus */
+  .menu-list { display: flex; flex-direction: column; margin: -14px -16px; }
+  .menu-row { display: flex; align-items: center; min-height: 52px; padding: 0 16px; background: none; border: 0; border-bottom: 1px solid var(--hairline);
+    font: inherit; font-size: 16px; color: var(--ink); text-align: left; cursor: pointer; }
+  .menu-row:last-child { border-bottom: 0; }
+  .menu-row:active { background: var(--paper-2); }
+  .menu-row.danger { color: var(--red); }
+  .mtop-btn:disabled { opacity: .6; }
+  .mtop-btn .ix-spin { display: inline-flex; }
+  /* EO Columns as a sheet */
+  .eo-colsmenu.in-sheet { position: static; width: auto; max-height: none; border: 0; box-shadow: none; padding: 0; background: none; }
+  .eo-colsmenu.in-sheet label { min-height: 48px; font-size: 16px; border-bottom: 1px solid var(--hairline); }
+  .eo-colsmenu.in-sheet label input { width: 22px; height: 22px; }
+  .eo-colsmenu.in-sheet h4 { margin: 16px 0 4px; font-size: 13px; }
+  /* short dialogs (confirm / alert / prompt) stay small and centred */
+  .overlay:has(> .dlg) { align-items: center; justify-content: center; padding: 16px; }
+  .modal.dlg { width: 100% !important; max-width: 420px; height: auto; max-height: 90dvh; border-radius: 14px; padding: 20px 18px 0; }
+  .modal.dlg > .modal-actions:last-child { margin: 16px -18px 0; padding: 12px 18px 14px; border-radius: 0 0 14px 14px; }
+  .modal.dlg .modal-actions .btn { flex: 1 1 0; }
+  /* Efforts vs Outcome on phones: section names stay visible while the grid scrolls sideways */
+  .eo-section td > .eo-secname { position: sticky; left: 10px; display: inline-block; max-width: calc(100vw - 72px); white-space: normal; }
+  .tag-names summary { min-height: 44px; display: flex; align-items: center; color: var(--accent-text); font-weight: 600; cursor: pointer; }
+  .tag-names ul { margin: 0; padding-left: 18px; font-size: 14px; overflow-wrap: anywhere; }
+  .ix-method summary { min-height: 44px; display: flex; align-items: center; }
+  .eo-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--text-body); }
+  .eo-legend .sw { display: inline-block; padding: 1px 8px; border-radius: 6px; font-weight: 700; font-size: 13px; }
   .modal-actions { flex-wrap: wrap; }
   .panel .modal-actions .btn, .blocker-card .modal-actions .btn { flex: 1 1 auto; }
   .panel h2 { flex-wrap: wrap; }
@@ -642,8 +668,18 @@ tr.clk { cursor: pointer; }
   .main td, .main th { white-space: nowrap; }
   .main td.ix-name, .main td.hs-deal, .main td.cc-wrap { white-space: normal; min-width: 11rem; }
 
-  /* ---- filters: one button that opens a bottom panel ---- */
-  .mf-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 16px; font-size: 15px; }
+  /* ---- filters: one button that opens a bottom sheet; active filters as chips ---- */
+  .mf-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; min-width: 0; }
+  .mf-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; flex-shrink: 0; }
+  .mf-chips { display: flex; gap: 8px; margin: 0; padding: 0 16px 0 0; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain;
+    scrollbar-width: none; min-width: 0; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .mf-chips::-webkit-scrollbar { display: none; }
+  .mf-chips li { scroll-snap-align: start; flex-shrink: 0; }
+  .mf-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 22px;
+    background: var(--accent-soft); color: var(--text-head); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  .mf-chip span { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+  .mf-chip:active { background: var(--paper-2); }
+  .mf-sheet .sheet-body { padding: 0; }
   .mf-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 20px; background: var(--accent); color: var(--on-accent); font-size: 14px; line-height: 22px; text-align: center; }
   .mf-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; background: var(--overlay); }
   .mf-sheet { width: 100%; max-height: 86dvh; display: flex; flex-direction: column; background: var(--surface-raised); color: var(--ink);
@@ -673,6 +709,7 @@ tr.clk { cursor: pointer; }
   .modal-back:active { background: var(--paper-2); }
   .modal-bar + h2 { margin-top: 10px; }
   .phone-only { display: block; }
+  .phone-inline { display: inline; }
   .phone-label.sr-only { position: static; width: auto; height: auto; margin: 10px 0 5px; overflow: visible; clip: auto; white-space: normal;
     font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
   .tm-danger { margin: 18px 0 4px; padding-top: 14px; border-top: 1px solid var(--hairline); }

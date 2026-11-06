@@ -31,7 +31,7 @@ function Toggle({ label, checked, disabled, note, onChange }) {
 }
 
 // "Who can see this tab": role toggles and per-person ticks (admins only).
-function AccessPanel({ tabKey, onClose }) {
+export function AccessPanel({ tabKey, onClose }) {
   const { db, refresh } = useApp();
   const [roles, setRoles] = useState(null);
   const [users, setUsers] = useState(new Set());
@@ -149,13 +149,13 @@ function AccessPanel({ tabKey, onClose }) {
 }
 
 // Eye icon next to the refresh button; admins only.
-export default function TabAccessButton({ tabKey }) {
+export default function TabAccessButton({ tabKey, className = "" }) {
   const { me } = useApp();
   const [open, setOpen] = useState(false);
   if (me?.role !== "admin") return null;
   return (
     <>
-      <button type="button" className="btn sm ghost ix-refresh" title="Who can see this tab" aria-label="Who can see this tab" onClick={() => setOpen(true)}>
+      <button type="button" className={"btn sm ghost ix-refresh " + className} title="Who can see this tab" aria-label="Who can see this tab" onClick={() => setOpen(true)}>
         <EyeIcon />
       </button>
       {/* Rendered at the page root so the header's right alignment doesn't apply. */}
