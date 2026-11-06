@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Fab from "../components/Fab.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useTaskHandlers } from "../hooks/useTaskHandlers.js";
@@ -99,13 +100,14 @@ export default function Grid() {
         sub="Full task list and team for this project."
         actions={
           <>
-            <button className="btn ghost" onClick={() => setSelected(null)}>← All projects</button>
+            <button className="btn ghost hide-phone" onClick={() => setSelected(null)}>← All projects</button>
             {!isViewer() && (
-              <button className="btn" onClick={() => modals.openTask(null)}>+ Task</button>
+              <button className="btn hide-phone" onClick={() => modals.openTask(null)}>+ Task</button>
             )}
           </>
         }
       />
+      {!isViewer() && <Fab label="New task" onClick={() => modals.openTask(null)} />}
 
       <div className="panel">
         <h2>

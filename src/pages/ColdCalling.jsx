@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
@@ -339,7 +340,7 @@ export default function ColdCalling() {
           <span>{v.perCaller.length} {v.perCaller.length === 1 ? "caller" : "callers"}</span>
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 2, 3]} side={5}><table>
             <thead>
               <tr>
                 <th>Caller</th><th className="num">Leads called</th><th className="num">Connected calls</th>
@@ -369,7 +370,7 @@ export default function ColdCalling() {
                 </tr>
               </tfoot>
             )}
-          </table>
+          </table></RowTable>
         </div>
       </div>
 
@@ -421,7 +422,7 @@ export default function ColdCalling() {
           />
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable title={1} meta={[2, 0, 4]} side={5}><table>
             <thead>
               <tr><th>Follow-up date</th><th>Contact</th><th>Company</th><th>Campaign</th><th>Caller</th><th>Last outcome</th><th>Notes</th></tr>
             </thead>
@@ -439,7 +440,7 @@ export default function ColdCalling() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
         </div>
         {fuList.length > 10 && (
           <div className="hs-more">
@@ -457,7 +458,7 @@ export default function ColdCalling() {
           <span>As of now · product, industry and region read from the campaign name</span>
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 3, 5]} side={8}><table>
             <thead>
               <tr>
                 <th>Campaign</th><th>Product</th><th>Industry</th><th>Region</th><th className="num">Contacts given</th>
@@ -476,7 +477,7 @@ export default function ColdCalling() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
         </div>
         <p className="hs-note">
           How names are read: the product comes first ({(data?.products || []).map((p) => p.product).join(", ") || "CCTV, NavAI, Data Transformation, Quote Buddy"}), the
@@ -491,7 +492,7 @@ export default function ColdCalling() {
           <span>As of now · grouped by “Data added on”</span>
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 2, 4]} side={6}><table>
             <thead>
               <tr>
                 <th>Data added on</th><th className="num">Contacts given</th><th className="num">Dialled</th><th className="num">Pending</th>
@@ -520,7 +521,7 @@ export default function ColdCalling() {
                 </tr>
               </tfoot>
             )}
-          </table>
+          </table></RowTable>
         </div>
         <p className="hs-note">
           A contact counts once, under the date it was first given. “Pending” means no call logged yet. “Reached” means at least one connected call.

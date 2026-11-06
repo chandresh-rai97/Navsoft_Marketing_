@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
@@ -339,7 +340,7 @@ export default function HubSpotActivity() {
           ))}
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 2]} side={4}><table>
             <thead>
               <tr>
                 <th>Deal</th><th>Stage</th><th>Owner</th><th>Last contacted</th><th className="num">Days without contact</th><th></th>
@@ -366,7 +367,7 @@ export default function HubSpotActivity() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
         </div>
         {dealList.length > 10 && (
           <div className="hs-more">
@@ -393,7 +394,7 @@ export default function HubSpotActivity() {
           <span>{person ? nameOf[person] : `${v.summary.length} people`}</span>
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 2, 3]} side={7}><table>
             <thead>
               <tr>
                 <th>Person</th><th className="num">Calls</th><th className="num">Emails</th><th className="num">Meetings</th>
@@ -429,7 +430,7 @@ export default function HubSpotActivity() {
                 </tr>
               </tfoot>
             )}
-          </table>
+          </table></RowTable>
         </div>
         <p className="hs-note">Pending tasks, overdue tasks and neglected deals are as of now and don’t change with the date range.</p>
       </div>
@@ -453,7 +454,7 @@ export default function HubSpotActivity() {
           <span>As of now · overdue = due time has passed</span>
         </div>
         <div className="hs-scroll">
-          <table>
+          <RowTable meta={[1, 2, 3]} side={4}><table>
             <thead>
               <tr>
                 <th>Person</th><th className="num">Due today</th><th className="num">Overdue</th><th className="num">Upcoming</th><th className="num">Total pending</th>
@@ -470,7 +471,7 @@ export default function HubSpotActivity() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
         </div>
       </div>
     </div>

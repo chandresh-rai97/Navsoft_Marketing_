@@ -1,4 +1,5 @@
 import React from "react";
+import RowTable from "../components/RowTable.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useDialog } from "../components/Dialog.jsx";
@@ -48,7 +49,7 @@ export default function Settings() {
             + Add person
           </button>
         </h2>
-        <table>
+        <RowTable meta={[2, 3]}><table>
           <thead>
             <tr>
               <th>Name</th>
@@ -88,7 +89,7 @@ export default function Settings() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></RowTable>
         {isAdmin() && (
           <div className="hint" style={{ marginTop: 8 }}>
             Only admins see the Delete control. Deleting a user revokes their login completely.
@@ -103,7 +104,7 @@ export default function Settings() {
             + Add project
           </button>
         </h2>
-        <table>
+        <RowTable meta={[1, 2]}><table>
           <thead>
             <tr>
               <th>Project</th>
@@ -136,7 +137,7 @@ export default function Settings() {
               </tr>
             )}
           </tbody>
-        </table>
+        </table></RowTable>
       </div>
 
       <div className="panel">
@@ -187,7 +188,7 @@ export default function Settings() {
           Make someone a manager with <strong>Edit</strong> above (set Role = manager), then allot them
           projects by opening each project and setting its <strong>Lead</strong>.
         </div>
-        <table>
+        <RowTable meta={[1]}><table>
           <thead>
             <tr>
               <th>Manager</th>
@@ -220,7 +221,7 @@ export default function Settings() {
                 );
               })}
           </tbody>
-        </table>
+        </table></RowTable>
       </div>
 
       <InstantlyTags />

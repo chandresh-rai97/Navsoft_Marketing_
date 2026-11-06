@@ -65,22 +65,32 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
     <div className={"task-row" + (pinned ? " pinned" : "") + (checked ? " done" : "")}>
       {control}
       <div className="task-body" onClick={() => onOpen && onOpen(t.id)}>
-        <div className="task-title">{t.title}</div>
+        <div className="task-title">
+          {onOpen ? (
+            // a real button so the row can be opened from the keyboard; on phones
+            // its tap area covers the whole row
+            <button type="button" className="task-open" onClick={(e) => { e.stopPropagation(); onOpen(t.id); }}>
+              {t.title}
+            </button>
+          ) : (
+            t.title
+          )}
+        </div>
         <div className="task-meta">
           <span className="chip">
             {p && <span className="dot" style={{ background: p.color || "var(--text-subtle)" }} />}
             {pname(t.project_id)}
           </span>
-          <span className="chip" title="Key Result">
+          <span className="chip tm-extra" title="Key Result">
             🎯 {kr ? kr.title : "No KR"}
           </span>
           {dependsOn && (
-            <span className="chip" title="Depends on">
+            <span className="chip tm-extra" title="Depends on">
               ⛓ Depends on: {dependsOn}
             </span>
           )}
           {t.assigned_by_user_id && t.assigned_by_user_id !== t.assignee_user_id && (
-            <span className="chip" title="Assigned by">
+            <span className="chip tm-extra" title="Assigned by">
               👤 Assigned by {uname(t.assigned_by_user_id)}
             </span>
           )}
@@ -109,7 +119,7 @@ export default function TaskRow({ task: t, opts = {}, onOpen, onToggle }) {
           )}
           {opts.showAssignee && <span>· {uname(t.assignee_user_id)}</span>}
           {t.acceptance_required && (
-            <span className="chip" title="Needs acceptance">
+            <span className="chip tm-extra" title="Needs acceptance">
               ✔ accept
             </span>
           )}

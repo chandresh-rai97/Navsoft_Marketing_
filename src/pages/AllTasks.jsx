@@ -11,6 +11,10 @@ import { STATUSES, STATUS_LABEL, CARRY_THRESHOLD, MOVE_REASON_AFTER } from "../l
 import { fmtDate, todayStr, shiftStr } from "../lib/format.js";
 import { toCSV, downloadText } from "../lib/csv.js";
 import { useViewState } from "../hooks/useViewState.js";
+import { useBackClose } from "../hooks/useBackClose.js";
+import { useLongPress } from "../hooks/useLongPress.js";
+import Sheet from "../components/Sheet.jsx";
+import BulkBar from "../components/BulkBar.jsx";
 
 // Which date column to filter on.
 const DATE_FIELDS = [
@@ -72,6 +76,7 @@ export default function AllTasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arg?.project, arg?.kr]);
   const mobile = useIsMobile();
+  const longPress = useLongPress();
   const [dateF, setDateF] = useViewState("alltasks.dateF", { field: "due_date", op: "", v1: "", v2: "" });
   const [sel, setSel] = useState({});
   const [bulkUser, setBulkUser] = useState("");
@@ -127,6 +132,22 @@ export default function AllTasks() {
   }, [db.tasks, f, dateF, isOverdue]);
 
   const canBulk = isManager();
+  // Phones: select mode, bulk-action sheets and paging (100 rows at a time).
+  const PAGE = 100;
+  const [selecting, setSelecting] = useState(false);
+  const [bulkSheet, setBulkSheet] = useState(null);
+  const [shown, setShown] = useState(PAGE);
+  const exitSelect = () => {
+    setSelecting(false);
+    setSel({});
+  };
+  useEffect(() => {
+    if (!mobile || !selecting) return undefined;
+    document.documentElement.classList.add("select-mode");
+    return () => document.documentElement.classList.remove("select-mode");
+  }, [mobile, selecting]);
+  useBackClose(mobile && selecting, exitSelect);
+  useEffect(() => setShown(PAGE), [f, dateF]);
   const selectedIds = Object.keys(sel).filter((k) => sel[k]);
   const allChecked = rows.length > 0 && rows.every((t) => sel[t.id]);
 
@@ -171,6 +192,7 @@ export default function AllTasks() {
     try {
       await deleteTasks(selectedIds);
       setSel({});
+      setSelecting(false);
     } catch (e) {
       dlg.alert("Couldn't delete: " + (e.message || e));
     }
@@ -268,7 +290,7 @@ export default function AllTasks() {
         </div>
       </MobileFilters>
 
-      {canBulk && selectedIds.length > 0 && (
+      {canBulk && !mobile && selectedIds.length > 0 && (
         <div className="panel" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <strong style={{ fontSize: 13 }}>{selectedIds.length} selected</strong>
           <select value={bulkUser} onChange={(e) => setBulkUser(e.target.value)} style={{ padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7 }}>
@@ -300,51 +322,115 @@ export default function AllTasks() {
       {rows.length === 0 ? (
         <div className="empty">No tasks match.</div>
       ) : mobile ? (
-        // Phones: one card per task instead of a wide table row.
-        <div className="mcards">
-          {rows.map((t) => (
-            <div key={t.id} className="mcard">
-              <div className="mcard-top">
-                {canBulk && (
-                  <input
-                    type="checkbox"
-                    aria-label={"Select " + t.title}
-                    checked={!!sel[t.id]}
-                    onChange={(e) => setSel((s) => ({ ...s, [t.id]: e.target.checked }))}
-                  />
-                )}
-                <button type="button" className="mcard-title" onClick={() => modals.openTask(t.id)}>
-                  {t.title}
+        // Phones: one row per task (tap opens it). "Select" shows checkboxes and
+        // a bottom bar with the bulk actions; long-press a row to start selecting.
+        <>
+          {canBulk && (
+            <div className="at-selbar">
+              <button type="button" className="btn ghost" aria-pressed={selecting} onClick={() => (selecting ? exitSelect() : setSelecting(true))}>
+                {selecting ? "Done selecting" : "Select"}
+              </button>
+              {selecting && (
+                <button type="button" className="btn ghost" onClick={() => setSel(allChecked ? {} : Object.fromEntries(rows.map((t) => [t.id, true])))}>
+                  {allChecked ? "Clear all" : `Select all ${rows.length}`}
                 </button>
-              </div>
-              <div className="task-meta">
-                <span className="chip">
-                  <ProjectDot projectId={t.project_id} />
-                  {pname(t.project_id)}
-                </span>
-                <StatusTag status={t.status} />
-                <span>{uname(t.assignee_user_id)}</span>
-                <span>Due {fmtDate(t.due_date)}</span>
-                {isOverdue(t) && <span className="warnflag">overdue</span>}
-                {t.carry_forward_count >= CARRY_THRESHOLD && <span className="warnflag">↻{t.carry_forward_count}</span>}
-                {t.due_date_change_count >= MOVE_REASON_AFTER && <span className="movedflag">moved{t.due_date_change_count}×</span>}
-              </div>
-              <div className="mcard-actions">
-                <button type="button" className="btn ghost" onClick={() => modals.openTask(t.id)}>Open</button>
-                {isAdmin() && (
+              )}
+            </div>
+          )}
+          <div className="mcards" role="list">
+            {rows.slice(0, shown).map((t) => (
+              <div
+                key={t.id}
+                role="listitem"
+                className={"mcard" + (selecting ? " selecting" : "") + (sel[t.id] ? " on" : "")}
+                {...longPress(() => { setSelecting(true); setSel((x) => ({ ...x, [t.id]: true })); })}
+              >
+                {selecting && (
+                  <label className="mcard-check">
+                    <input
+                      type="checkbox"
+                      aria-label={"Select " + t.title}
+                      checked={!!sel[t.id]}
+                      onChange={(e) => setSel((x) => ({ ...x, [t.id]: e.target.checked }))}
+                    />
+                  </label>
+                )}
+                <div className="mcard-main">
                   <button
                     type="button"
-                    className="btn ghost"
-                    style={{ color: "var(--red)", borderColor: "var(--red-border)" }}
-                    onClick={() => handleDelete(t)}
+                    className="mcard-title"
+                    onClick={() => (selecting ? setSel((x) => ({ ...x, [t.id]: !x[t.id] })) : modals.openTask(t.id))}
                   >
-                    Delete
+                    {t.title}
                   </button>
-                )}
+                  <div className="task-meta">
+                    <StatusTag status={t.status} />
+                    <span>{uname(t.assignee_user_id)}</span>
+                    <span>Due {fmtDate(t.due_date)}</span>
+                    {isOverdue(t) && <span className="warnflag">Overdue</span>}
+                    {t.carry_forward_count >= CARRY_THRESHOLD && <span className="warnflag">↻{t.carry_forward_count}</span>}
+                    {t.due_date_change_count >= MOVE_REASON_AFTER && <span className="movedflag">moved {t.due_date_change_count}×</span>}
+                    <span>
+                      <ProjectDot projectId={t.project_id} />
+                      {pname(t.project_id)}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          {rows.length > shown && (
+            <button type="button" className="btn ghost at-more" onClick={() => setShown((n) => n + PAGE)}>
+              Show {Math.min(PAGE, rows.length - shown)} more ({rows.length - shown} left)
+            </button>
+          )}
+          {selecting && (
+            <BulkBar
+              count={selectedIds.length}
+              onExit={exitSelect}
+              onReassign={() => setBulkSheet("reassign")}
+              onReschedule={() => setBulkSheet("reschedule")}
+              onDelete={isAdmin() ? handleBulkDelete : null}
+            />
+          )}
+          {bulkSheet === "reassign" && (
+            <Sheet
+              title={`Reassign ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"}`}
+              onClose={() => setBulkSheet(null)}
+              footer={
+                <button type="button" className="btn" disabled={!bulkUser} onClick={async () => {
+                  await reassignTasks(selectedIds, bulkUser); setBulkUser(""); setBulkSheet(null); exitSelect();
+                }}>Reassign</button>
+              }
+            >
+              <div className="field">
+                <label htmlFor="at-bulk-user">New owner</label>
+                <select id="at-bulk-user" value={bulkUser} onChange={(e) => setBulkUser(e.target.value)}>
+                  <option value="">Choose a person…</option>
+                  {activeUsers().map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            </Sheet>
+          )}
+          {bulkSheet === "reschedule" && (
+            <Sheet
+              title={`Reschedule ${selectedIds.length} task${selectedIds.length === 1 ? "" : "s"}`}
+              onClose={() => setBulkSheet(null)}
+              footer={
+                <button type="button" className="btn" disabled={!bulkDate} onClick={async () => {
+                  await rescheduleTasks(selectedIds, bulkDate); setBulkSheet(null); exitSelect();
+                }}>Reschedule</button>
+              }
+            >
+              <div className="field">
+                <label htmlFor="at-bulk-date">New due date</label>
+                <input id="at-bulk-date" type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+              </div>
+            </Sheet>
+          )}
+        </>
       ) : (
         <div className="panel" style={{ padding: "6px 10px" }}>
           <table>

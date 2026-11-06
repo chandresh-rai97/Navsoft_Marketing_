@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import RowTable from "../components/RowTable.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
@@ -346,7 +347,7 @@ export default function Campaigns() {
             <h2>Regions side by side</h2>
             <p>Each region's campaigns in the selected dates · bounce rates above 5% in red</p>
             <div className="panel ix-scroll">
-              <table className="ix-table">
+              <RowTable meta={[2, 1]} side={6}><table className="ix-table">
                 <thead>
                   <tr>
                     <th>Region</th><th className="num">Campaigns</th><th className="num">Sent</th><th className="num">Open rate</th>
@@ -367,7 +368,7 @@ export default function Campaigns() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></RowTable>
               {ready && !v.regions.length && <p className="ix-empty">No emails were sent in these dates.</p>}
             </div>
           </div>
@@ -383,7 +384,7 @@ export default function Campaigns() {
               <h2>Top campaigns</h2>
               <p className="ix-note">Top 10 by unique clicks in the selected dates</p>
               <div className="ix-scroll">
-                <table className="ix-table">
+                <RowTable meta={[1, 4]} side={5}><table className="ix-table">
                   <thead>
                     <tr>
                       <th>Campaign</th><th className="ix-hide">Region</th><th className="num">Sent</th>
@@ -402,7 +403,7 @@ export default function Campaigns() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></RowTable>
                 {ready && !v.top.length && <p className="ix-empty">No campaigns sent emails in these dates.</p>}
               </div>
             </div>
@@ -410,7 +411,7 @@ export default function Campaigns() {
               <h2>Weakest campaigns</h2>
               <p className="ix-note">5 weakest of those that sent 200+ emails · score 0–100, higher is worse</p>
               <div className="ix-scroll">
-                <table className="ix-table">
+                <RowTable meta={[3]} side={4}><table className="ix-table">
                   <thead>
                     <tr>
                       <th>Campaign</th><th className="num">Open rate</th><th className="num">Click rate</th>
@@ -428,7 +429,7 @@ export default function Campaigns() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></RowTable>
                 {ready && !v.weak.length && <p className="ix-empty">No campaign sent 200+ emails in these dates.</p>}
               </div>
             </div>
@@ -469,7 +470,7 @@ export default function Campaigns() {
               <h2>Campaigns active today</h2>
               <p className="ix-note">Every campaign with any activity today, most emails sent first</p>
               <div className="ix-scroll">
-                <table className="ix-table">
+                <RowTable meta={[2, 3]} side={5}><table className="ix-table">
                   <thead>
                     <tr>
                       <th>Campaign</th><th className="ix-hide">Region</th><th className="num">Sent</th><th className="num">Opens</th>
@@ -489,7 +490,7 @@ export default function Campaigns() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></RowTable>
                 {ready && !v.active.length && <p className="ix-empty">No activity recorded today yet.</p>}
               </div>
             </div>

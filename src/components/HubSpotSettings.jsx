@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import RowTable from "./RowTable.jsx";
 import { supabase } from "../lib/supabase.js";
 import { useDialog } from "./Dialog.jsx";
 import { saveAlertSettings, savePeople } from "../lib/hubspot.js";
@@ -85,7 +86,7 @@ export default function HubSpotSettings() {
       ) : (
         <>
           <div className="su-h">Neglected-deal alert</div>
-          <table>
+          <RowTable stack><table>
             <thead>
               <tr>
                 <th>Stage ID in HubSpot</th>
@@ -104,7 +105,7 @@ export default function HubSpotSettings() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
             <button className="btn sm ghost" onClick={() => setStages((l) => [...l, { id: "", label: "" }])}>+ Add stage</button>
             <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12.5 }}>
@@ -123,7 +124,7 @@ export default function HubSpotSettings() {
             Only these HubSpot owners (plus records with no owner) are synced and shown. Removing or deactivating
             someone deletes their synced records.
           </div>
-          <table>
+          <RowTable stack><table>
             <thead>
               <tr>
                 <th>HubSpot owner ID</th>
@@ -144,7 +145,7 @@ export default function HubSpotSettings() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn sm ghost" onClick={() => setPeople((l) => [...l, { owner_id: "", name: "", active: true }])}>+ Add person</button>
             <button className="btn sm" disabled={saving === "people"} onClick={saveList}>

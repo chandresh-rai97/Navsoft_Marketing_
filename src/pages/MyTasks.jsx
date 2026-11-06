@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import Fab from "../components/Fab.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useTaskHandlers } from "../hooks/useTaskHandlers.js";
@@ -76,12 +77,13 @@ export default function MyTasks() {
             <button className="btn ghost" onClick={() => modals.openImport()}>
               Import from spreadsheet
             </button>
-            <button className="btn" onClick={() => modals.openTask(null)}>
+            <button className="btn hide-phone" onClick={() => modals.openTask(null)}>
               + Task
             </button>
           </>
         }
       />
+      <Fab label="New task" onClick={() => modals.openTask(null)} />
       <MobileFilters count={(filter !== "today") + (group !== "none")}>
         <div className="filters">
           <div className="seg">

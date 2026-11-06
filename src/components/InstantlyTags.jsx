@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import RowTable from "./RowTable.jsx";
 import { supabase } from "../lib/supabase.js";
 import { useDialog } from "./Dialog.jsx";
 import { UNMAPPED, byRegion } from "../lib/instantly.js";
@@ -70,7 +71,7 @@ export default function InstantlyTags() {
       ) : tags.length === 0 ? (
         <div className="empty">No unmapped tags. Every campaign has a known region or no tag at all.</div>
       ) : (
-        <table>
+        <RowTable stack><table>
           <thead>
             <tr>
               <th>Tag</th>
@@ -107,7 +108,7 @@ export default function InstantlyTags() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></RowTable>
       )}
     </div>
   );

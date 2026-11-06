@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import RowTable from "./RowTable.jsx";
 import { supabase } from "../lib/supabase.js";
 import { useDialog } from "./Dialog.jsx";
 import { CATEGORIES, saveOutcomes, saveProducts } from "../lib/coldCalling.js";
@@ -62,7 +63,7 @@ export default function CallSettings() {
       ) : (
         <>
           <div className="su-h">Call outcomes</div>
-          <table>
+          <RowTable stack><table>
             <thead>
               <tr><th>Outcome (as in the sheet)</th><th>Counts as</th><th></th></tr>
             </thead>
@@ -79,7 +80,7 @@ export default function CallSettings() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn sm ghost" onClick={() => setOutcomes((l) => [...l, { outcome: "", category: "Not connected" }])}>+ Add outcome</button>
             <button className="btn sm" disabled={saving === "outcomes"} onClick={() => save("outcomes")}>
@@ -91,7 +92,7 @@ export default function CallSettings() {
           <div className="hint" style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 6 }}>
             A campaign name that starts with a keyword gets that product. Names that start with no keyword count as events.
           </div>
-          <table>
+          <RowTable stack><table>
             <thead>
               <tr><th>Keyword (start of the name)</th><th>Product</th><th></th></tr>
             </thead>
@@ -104,7 +105,7 @@ export default function CallSettings() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn sm ghost" onClick={() => setProducts((l) => [...l, { keyword: "", product: "" }])}>+ Add product</button>
             <button className="btn sm" disabled={saving === "products"} onClick={() => save("products")}>

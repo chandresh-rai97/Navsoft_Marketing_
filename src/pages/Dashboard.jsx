@@ -1,4 +1,5 @@
 import React from "react";
+import RowTable from "../components/RowTable.jsx";
 import { useApp } from "../context/AppData.jsx";
 import PageHead from "../components/PageHead.jsx";
 import { ProjectDot } from "../components/TaskRow.jsx";
@@ -77,7 +78,7 @@ export default function Dashboard() {
         {lagging.length === 0 ? (
           <div className="empty" style={{ margin: 10 }}>Nobody's behind right now — nice.</div>
         ) : (
-          <table>
+          <RowTable meta={[1, 2, 3]} side={4}><table>
             <thead>
               <tr>
                 <th>Team member</th>
@@ -100,7 +101,7 @@ export default function Dashboard() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></RowTable>
         )}
       </div>
 

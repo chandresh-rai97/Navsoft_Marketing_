@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import Fab from "../components/Fab.jsx";
 import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useTaskHandlers } from "../hooks/useTaskHandlers.js";
@@ -57,12 +58,13 @@ export default function MyDay() {
             <button className="btn accent" onClick={modals.openStandup}>
               Run standup
             </button>
-            <button className="btn" onClick={() => modals.openTask(null)}>
+            <button className="btn hide-phone" onClick={() => modals.openTask(null)}>
               + Task
             </button>
           </>
         }
       />
+      <Fab label="New task" onClick={() => modals.openTask(null)} />
 
       {pinned.length > 0 && (
         <div className="panel" style={{ borderColor: "var(--red-border)", background: "var(--red-faint)" }}>
