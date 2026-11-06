@@ -6,6 +6,9 @@ import { tabAccessMap } from "../lib/tabAccess.js";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import Icon from "./Icon.jsx";
 import { canGoBackInApp } from "../lib/router.js";
+import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
+import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useToast } from "./Toast.jsx";
 
 const MEMBER_NAV = [
   ["myday", "My Day"],
@@ -119,8 +122,19 @@ export function usePills() {
 }
 
 export default function Layout({ view, arg, navigate, children }) {
-  const { me, db, signOut, unreadCount } = useApp();
+  const { me, db, signOut, unreadCount, refresh } = useApp();
   const pillFor = usePills();
+  const mobile = useIsMobile();
+  const { toast } = useToast();
+  // Installed app on a phone: pull down from the top to reload the data.
+  const ptr = usePullToRefresh(mobile, async () => {
+    try {
+      await refresh();
+      toast("Up to date.");
+    } catch {
+      toast({ message: "Couldn't refresh – check your connection.", tone: "error", action: { label: "Retry", onClick: () => refresh().catch(() => {}) } });
+    }
+  });
   if (!me) return null;
   const go = (key) => navigate(key);
   const cfg = navConfig(me.role, tabAccessMap(me, db));
@@ -206,6 +220,12 @@ export default function Layout({ view, arg, navigate, children }) {
           </button>
         </div>
       </nav>
+      {(ptr.pull > 0 || ptr.busy) && (
+        <div className={"ptr" + (ptr.ready ? " ready" : "") + (ptr.busy ? " busy" : "")} style={{ transform: `translate(-50%, ${ptr.busy ? 64 : ptr.pull}px)` }} aria-hidden="true">
+          <Icon name="refresh" size={20} className={ptr.busy ? "ix-spin" : ""} />
+        </div>
+      )}
+      <span className="sr-only" role="status">{ptr.busy ? "Refreshing…" : ""}</span>
       <main className="main">{children}</main>
       <nav className="mtabs" aria-label="Main">
         {[...tabs, ["more", "More", "more"]].map(([key, label, icon]) => {

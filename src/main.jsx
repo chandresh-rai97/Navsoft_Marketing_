@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.jsx";
 import { DialogProvider } from "./components/Dialog.jsx";
 import { AppDataProvider } from "./context/AppData.jsx";
+import { ToastProvider } from "./components/Toast.jsx";
 import OfflineScreen from "./components/OfflineScreen.jsx";
 import { trackKeyboard } from "./lib/keyboard.js";
 
@@ -12,10 +13,12 @@ trackKeyboard();
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <DialogProvider>
-      <AppDataProvider>
-        <App />
-        <OfflineScreen />
-      </AppDataProvider>
+      <ToastProvider>
+        <AppDataProvider>
+          <App />
+          <OfflineScreen />
+        </AppDataProvider>
+      </ToastProvider>
     </DialogProvider>
   </React.StrictMode>
 );

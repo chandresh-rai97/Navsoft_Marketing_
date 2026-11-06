@@ -209,6 +209,15 @@ tr.clk { cursor: pointer; }
 .task-open { all: unset; cursor: pointer; overflow-wrap: anywhere; }
 .task-open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 .fab { display: none; }
+/* snackbar (all sizes) */
+.snack-live { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 90; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }
+.snack { pointer-events: auto; display: flex; align-items: center; gap: 4px; min-height: 48px; max-width: 560px; width: max-content; padding: 4px 4px 4px 16px; border-radius: 10px;
+  background: var(--sidebar-bg); color: var(--sidebar-text); box-shadow: 0 8px 24px rgba(0,0,0,.28); font-size: 14px; }
+.snack.error { border-left: 4px solid var(--danger-solid); }
+.snack-msg { flex: 1; min-width: 0; padding: 8px 0; }
+.snack-btn { min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--navai-light-blue); font: inherit; font-weight: 700; cursor: pointer; }
+.snack-x { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: none; color: var(--sidebar-text-soft); cursor: pointer; }
+.ptr { display: none; }
 .task-title { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
 .task-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .chip { font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--paper-2); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 5px; }
@@ -559,6 +568,22 @@ tr.clk { cursor: pointer; }
   .fab:active { background: var(--accent-pressed); }
   .hide-phone { display: none !important; }
   .select-mode .mtabs, .select-mode .fab { display: none; }
+  .snack-live { bottom: calc(64px + 12px + env(safe-area-inset-bottom)); }
+  .select-mode .snack-live { bottom: calc(64px + 12px + env(safe-area-inset-bottom)); }
+  .snack { width: 100%; }
+  .has-snackbar .fab { bottom: calc(64px + 16px + 64px + env(safe-area-inset-bottom)); }
+  .ptr { display: flex; position: fixed; z-index: 38; left: 50%; top: calc(56px + 6px + env(safe-area-inset-top) - 40px); width: 40px; height: 40px; border-radius: 50%;
+    align-items: center; justify-content: center; background: var(--surface-raised); color: var(--text-muted); box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .ptr.ready, .ptr.busy { color: var(--accent-text); }
+/* snackbar (all sizes) */
+.snack-live { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 90; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }
+.snack { pointer-events: auto; display: flex; align-items: center; gap: 4px; min-height: 48px; max-width: 560px; width: max-content; padding: 4px 4px 4px 16px; border-radius: 10px;
+  background: var(--sidebar-bg); color: var(--sidebar-text); box-shadow: 0 8px 24px rgba(0,0,0,.28); font-size: 14px; }
+.snack.error { border-left: 4px solid var(--danger-solid); }
+.snack-msg { flex: 1; min-width: 0; padding: 8px 0; }
+.snack-btn { min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--navai-light-blue); font: inherit; font-weight: 700; cursor: pointer; }
+.snack-x { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: none; color: var(--sidebar-text-soft); cursor: pointer; }
+.ptr { display: none; }
   /* All Tasks: one row per task, Select mode, bottom action bar */
   .at-selbar { display: flex; gap: 8px; flex-wrap: wrap; margin: -6px 0 12px; }
   .mcards { display: flex; flex-direction: column; gap: 8px; }
