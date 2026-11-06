@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { useApp } from "../context/AppData.jsx";
 import { useDialog } from "./Dialog.jsx";
+import { useToast } from "./Toast.jsx";
 import { todayStr, shiftStr, fmtDate } from "../lib/format.js";
 
 // Reviewer controls for a submitted task: see the proof link, then Accept
 // (marks Done) or Request changes (with a "Resubmit by" date + optional note).
 // Also renders the review outcome (note / resubmit date) as read-only info.
 export default function ReviewActions({ task, onDone }) {
-  const { canReview, acceptReview, requestChanges, uname } = useApp();
+  const { canReview, acceptReview, requestChanges, uname, undoComplete } = useApp();
   const dlg = useDialog();
+  const { toast } = useToast();
   const [mode, setMode] = useState(null); // null | "changes"
   const [resubmitBy, setResubmitBy] = useState(shiftStr(todayStr(), 3));
   const [note, setNote] = useState("");
@@ -17,10 +19,22 @@ export default function ReviewActions({ task, onDone }) {
   const reviewable = canReview(task) && task.status === "done_pending_acceptance";
 
   async function accept() {
+    const repeats = task.recurrence && task.recurrence !== "none";
+    // A repeating task gets its next occurrence when accepted, so there's no
+    // clean way back: ask first. One-time tasks get Undo instead.
+    if (repeats) {
+      const ok = await dlg.confirm(
+        `“${task.title}” repeats. Accepting marks it Done and creates the next occurrence. Are you sure?`
+      );
+      if (!ok) return;
+    }
+    const before = { ...task };
     setBusy(true);
     const r = await acceptReview(task.id);
     setBusy(false);
+    if (r && r.failed) return;
     if (r && r.ok === false) return dlg.alert(r.message);
+    if (!repeats) toast({ message: "Task accepted.", action: { label: "Undo", onClick: () => undoComplete(before) } });
     onDone && onDone();
   }
 
@@ -30,6 +44,7 @@ export default function ReviewActions({ task, onDone }) {
     setBusy(true);
     const r = await requestChanges(task.id, resubmitBy, note.trim());
     setBusy(false);
+    if (r && r.failed) return;
     if (r && r.ok === false) return dlg.alert(r.message);
     onDone && onDone();
   }

@@ -5,7 +5,9 @@ import React, {
   useMemo,
   useState,
   useCallback,
+  useRef,
 } from "react";
+import { useToast } from "../components/Toast.jsx";
 import { supabase } from "../lib/supabase.js";
 import {
   loadAll,
@@ -54,6 +56,38 @@ export function AppDataProvider({ children }) {
   const [authReady, setAuthReady] = useState(false);
   const [db, setDb] = useState(EMPTY_DB);
   const [loadingData, setLoadingData] = useState(false);
+  const { toast } = useToast();
+  const dbRef = useRef(db);
+  dbRef.current = db;
+
+  // Optimistic save: show the change at once, then write. If the write fails,
+  // put everything back and say so with a Retry button (never fail silently).
+  // `apply(db) -> db` is the local change; `write()` does the real save.
+  // Returns write()'s result, or { ok: false, failed: true } after a failure.
+  const optimistic = useCallback(
+    async (apply, write, retry) => {
+      const before = dbRef.current;
+      setDb(apply(before));
+      try {
+        return await write();
+      } catch (e) {
+        setDb(before);
+        const why = e && e.message ? ` (${String(e.message).slice(0, 80)})` : "";
+        toast({
+          message: "Couldn't save – your change was undone" + why + ".",
+          tone: "error",
+          action: retry ? { label: "Retry", onClick: retry } : null,
+          ms: 10000,
+        });
+        return { ok: false, failed: true };
+      }
+    },
+    [toast]
+  );
+  const patchTasks = (ids, patch) => (d) => ({
+    ...d,
+    tasks: d.tasks.map((t) => (ids.includes(t.id) ? { ...t, ...(typeof patch === "function" ? patch(t) : patch) } : t)),
+  });
 
   // ---- auth session lifecycle ----
   useEffect(() => {
@@ -136,7 +170,7 @@ export function AppDataProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+          await supabase.auth.signOut();
     setDb(EMPTY_DB);
   }, []);
 
@@ -364,18 +398,58 @@ export function AppDataProvider({ children }) {
       const t = db.tasks.find((x) => x.id === id);
       if (!t || !canEditTask(t)) return { ok: false };
       if (t.status === "done" || t.status === "done_pending_acceptance") {
-        await updateRow("tasks", t.id, {
-          status: "in_progress",
-          completed_at: null,
-          completed_by_user_id: null,
-        });
-        audit("task", t.id, "reopened", null, null);
-        await refresh();
-        return { ok: true };
+        return optimistic(
+          patchTasks([t.id], { status: "in_progress", completed_at: null, completed_by_user_id: null }),
+          async () => {
+            await updateRow("tasks", t.id, {
+              status: "in_progress",
+              completed_at: null,
+              completed_by_user_id: null,
+            });
+            audit("task", t.id, "reopened", null, null);
+            await refresh();
+            return { ok: true };
+          },
+          () => quickToggle(id)
+        );
       }
-      return applyStatus(t, "done");
+      const dod = t.definition_of_done || [];
+      if (dod.length && dod.some((d) => !d.done)) return applyStatus(t, "done"); // DoD message, nothing saved
+      const next = t.acceptance_required ? "done_pending_acceptance" : "done";
+      return optimistic(
+        patchTasks([t.id], { status: next, completed_at: next === "done" ? nowIso() : t.completed_at }),
+        () => applyStatus(t, "done"),
+        () => quickToggle(id)
+      );
     },
-    [db.tasks, canEditTask, applyStatus, audit, refresh]
+    [db.tasks, canEditTask, applyStatus, audit, refresh, optimistic]
+  );
+
+  // Undo a completion / acceptance made a moment ago (one-time tasks only, so
+  // no next occurrence was created): put back the fields it changed.
+  const undoComplete = useCallback(
+    (t) =>
+      optimistic(
+        patchTasks([t.id], {
+          status: t.status,
+          completed_at: t.completed_at,
+          completed_by_user_id: t.completed_by_user_id,
+          accepted_by_user_id: t.accepted_by_user_id,
+        }),
+        async () => {
+          await updateRow("tasks", t.id, {
+            status: t.status,
+            completed_at: t.completed_at || null,
+            completed_by_user_id: t.completed_by_user_id || null,
+            accepted_by_user_id: t.accepted_by_user_id || null,
+          });
+          audit("task", t.id, "undone", null, { status: t.status });
+          await refresh();
+          return { ok: true };
+        },
+        () => undoComplete(t)
+      ),
+    [optimistic, audit, refresh]
   );
 
   // Replace a task's dependency people with the given set of user ids.
@@ -396,46 +470,62 @@ export function AppDataProvider({ children }) {
     async (existing, form, opts = {}) => {
       const reason = opts.reason || "";
       if (existing) {
-        const patch = {
-          title: form.title,
-          description: form.description,
-          assignee_user_id: form.assignee_user_id,
-          project_id: form.project_id,
-          key_result_id: form.key_result_id || null, // Key Result is optional
-          planned_for_date: form.planned_for_date,
-          client_facing: form.client_facing,
-          recurrence: form.recurrence,
-          acceptance_required: form.acceptance_required,
-          definition_of_done: form.definition_of_done,
-          due_date: form.due_date,
-        };
-        // Reassigning to a different person records the new assigner.
-        if (form.assignee_user_id !== existing.assignee_user_id) {
-          patch.assigned_by_user_id = me.id;
-        }
-        if (form.due_date !== existing.due_date) {
-          patch.due_date_history = [
-            ...(existing.due_date_history || []),
-            {
-              old_date: existing.due_date,
-              new_date: form.due_date,
-              changed_by: me.id,
-              at: nowIso(),
-              reason,
-            },
-          ];
-          patch.due_date_change_count = (existing.due_date_change_count || 0) + 1;
-          audit("task", existing.id, "due_date_changed", { old: existing.due_date }, { new: form.due_date });
-        }
-        await updateRow("tasks", existing.id, patch);
-        await syncTaskDeps(existing.id, form.depends_on_user_ids);
-        audit("task", existing.id, "edited", null, null);
-        let statusRes = { ok: true };
-        if (form.status !== existing.status) {
-          statusRes = await applyStatus({ ...existing, ...patch }, form.status, { refresh: false });
-        }
-        await refresh();
-        return statusRes; // lets the modal surface the DoD gate message
+        // Shows the edit at once; rolls back with "Couldn't save – Retry" on failure.
+        return optimistic(
+          patchTasks([existing.id], {
+            title: form.title,
+            description: form.description,
+            assignee_user_id: form.assignee_user_id,
+            project_id: form.project_id,
+            key_result_id: form.key_result_id || null,
+            planned_for_date: form.planned_for_date,
+            due_date: form.due_date,
+            status: form.status,
+          }),
+          async () => {
+            const patch = {
+              title: form.title,
+              description: form.description,
+              assignee_user_id: form.assignee_user_id,
+              project_id: form.project_id,
+              key_result_id: form.key_result_id || null, // Key Result is optional
+              planned_for_date: form.planned_for_date,
+              client_facing: form.client_facing,
+              recurrence: form.recurrence,
+              acceptance_required: form.acceptance_required,
+              definition_of_done: form.definition_of_done,
+              due_date: form.due_date,
+            };
+            // Reassigning to a different person records the new assigner.
+            if (form.assignee_user_id !== existing.assignee_user_id) {
+              patch.assigned_by_user_id = me.id;
+            }
+            if (form.due_date !== existing.due_date) {
+              patch.due_date_history = [
+                ...(existing.due_date_history || []),
+                {
+                  old_date: existing.due_date,
+                  new_date: form.due_date,
+                  changed_by: me.id,
+                  at: nowIso(),
+                  reason,
+                },
+              ];
+              patch.due_date_change_count = (existing.due_date_change_count || 0) + 1;
+              audit("task", existing.id, "due_date_changed", { old: existing.due_date }, { new: form.due_date });
+            }
+            await updateRow("tasks", existing.id, patch);
+            await syncTaskDeps(existing.id, form.depends_on_user_ids);
+            audit("task", existing.id, "edited", null, null);
+            let statusRes = { ok: true };
+            if (form.status !== existing.status) {
+              statusRes = await applyStatus({ ...existing, ...patch }, form.status, { refresh: false });
+            }
+            await refresh();
+            return statusRes; // lets the modal surface the DoD gate message
+          },
+          () => saveTask(existing, form, opts)
+        );
       } else {
         const created = await insertRow("tasks", {
           title: form.title,
@@ -462,7 +552,7 @@ export function AppDataProvider({ children }) {
         return created;
       }
     },
-    [me, applyStatus, audit, refresh, syncTaskDeps]
+    [me, applyStatus, audit, refresh, syncTaskDeps, optimistic]
   );
 
   const acceptTask = useCallback(
@@ -513,17 +603,23 @@ export function AppDataProvider({ children }) {
       if (cur && cur.status === "done") {
         return { ok: false, message: "This task was already accepted and marked Done." };
       }
-      await updateRow("tasks", id, {
-        status: "done_pending_acceptance",
-        proof_link: proofLink || null,
-        resubmit_by: null,
-        submitted_at: nowIso(), // starts the reviewer's "waiting" clock
-      });
-      audit("task", id, "submitted", null, { proof_link: proofLink || null });
-      await refresh();
-      return { ok: true };
+      return optimistic(
+        patchTasks([id], { status: "done_pending_acceptance", proof_link: proofLink || null, resubmit_by: null, submitted_at: nowIso() }),
+        async () => {
+          await updateRow("tasks", id, {
+          status: "done_pending_acceptance",
+          proof_link: proofLink || null,
+          resubmit_by: null,
+          submitted_at: nowIso(), // starts the reviewer's "waiting" clock
+        });
+        audit("task", id, "submitted", null, { proof_link: proofLink || null });
+        await refresh();
+        return { ok: true };
+        },
+        () => submitForReview(id, proofLink)
+      );
     },
-    [db.tasks, audit, refresh]
+    [db.tasks, audit, refresh, optimistic]
   );
 
   // Reviewer accepts → marks the task Done (spawns recurrence if set). The DB
@@ -532,38 +628,44 @@ export function AppDataProvider({ children }) {
     async (id) => {
       const t = db.tasks.find((x) => x.id === id);
       if (!canReview(t)) return { ok: false, message: "Only the assigned reviewer can accept this." };
-      await updateRow("tasks", id, {
-        status: "done",
-        completed_at: nowIso(),
-        completed_by_user_id: me.id,
-        accepted_by_user_id: me.id,
-      });
-      audit("task", id, "accepted", null, null);
-      if (t.recurrence && t.recurrence !== "none" && !hasOpenOccurrence(t)) {
-        const step = t.recurrence === "daily" ? 1 : 7;
-        const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
-        await insertRow("tasks", {
-          title: t.title,
-          description: t.description,
-          assignee_user_id: t.assignee_user_id,
-          assigned_by_user_id: t.assigned_by_user_id, // preserve original assigner
-          project_id: t.project_id,
-          key_result_id: t.key_result_id,
-          status: "not_started",
-          due_date: nd,
-          original_due_date: nd,
-          planned_for_date: nd,
-          acceptance_required: t.acceptance_required,
-          client_facing: t.client_facing,
-          recurrence: t.recurrence,
-          recurrence_config: t.recurrence_config,
-          definition_of_done: (t.definition_of_done || []).map((d) => ({ text: d.text, done: false })),
+      return optimistic(
+        patchTasks([id], { status: "done", completed_at: nowIso(), completed_by_user_id: me.id, accepted_by_user_id: me.id }),
+        async () => {
+          await updateRow("tasks", id, {
+          status: "done",
+          completed_at: nowIso(),
+          completed_by_user_id: me.id,
+          accepted_by_user_id: me.id,
         });
-      }
-      await refresh();
-      return { ok: true };
+        audit("task", id, "accepted", null, null);
+        if (t.recurrence && t.recurrence !== "none" && !hasOpenOccurrence(t)) {
+          const step = t.recurrence === "daily" ? 1 : 7;
+          const nd = nextOccurrence(t.due_date, step); // schedule forward, never in the past
+          await insertRow("tasks", {
+            title: t.title,
+            description: t.description,
+            assignee_user_id: t.assignee_user_id,
+            assigned_by_user_id: t.assigned_by_user_id, // preserve original assigner
+            project_id: t.project_id,
+            key_result_id: t.key_result_id,
+            status: "not_started",
+            due_date: nd,
+            original_due_date: nd,
+            planned_for_date: nd,
+            acceptance_required: t.acceptance_required,
+            client_facing: t.client_facing,
+            recurrence: t.recurrence,
+            recurrence_config: t.recurrence_config,
+            definition_of_done: (t.definition_of_done || []).map((d) => ({ text: d.text, done: false })),
+          });
+        }
+        await refresh();
+        return { ok: true };
+        },
+        () => acceptReview(id)
+      );
     },
-    [db.tasks, canReview, me, audit, refresh, hasOpenOccurrence]
+    [db.tasks, canReview, me, audit, refresh, hasOpenOccurrence, optimistic]
   );
 
   // Reviewer requests changes → sends it back with a REQUIRED comment + a
@@ -576,33 +678,39 @@ export function AppDataProvider({ children }) {
       if (!note || !note.trim()) return { ok: false, message: "Please write what needs to change — a comment is required." };
       const entry = { at: nowIso(), by: me.id, resubmit_by: resubmitBy || null, note: note.trim() };
       const history = [...(t.review_history || []), entry];
-      await updateRow("tasks", id, {
-        status: "changes_requested",
-        resubmit_by: resubmitBy || null,
-        review_note: note.trim(),
-        review_history: history,
-        reopened_count: (t.reopened_count || 0) + 1,
-      });
-      // Notify the member whose task was bounced back.
-      try {
-        await insertRow("notifications", {
-          user_id: t.assignee_user_id,
-          type: "changes_requested",
-          task_id: id,
-          message:
-            `Changes requested on “${t.title}”` +
-            (resubmitBy ? ` — resubmit by ${resubmitBy}` : "") +
-            `: ${note.trim()}`,
-          read: false,
+      return optimistic(
+        patchTasks([id], { status: "changes_requested", resubmit_by: resubmitBy || null, review_note: note.trim(), review_history: history }),
+        async () => {
+          await updateRow("tasks", id, {
+          status: "changes_requested",
+          resubmit_by: resubmitBy || null,
+          review_note: note.trim(),
+          review_history: history,
+          reopened_count: (t.reopened_count || 0) + 1,
         });
-      } catch (e) {
-        console.warn("notification failed:", e?.message);
-      }
-      audit("task", id, "changes_requested", null, { resubmit_by: resubmitBy, note: note.trim() });
-      await refresh();
-      return { ok: true };
+        // Notify the member whose task was bounced back.
+        try {
+          await insertRow("notifications", {
+            user_id: t.assignee_user_id,
+            type: "changes_requested",
+            task_id: id,
+            message:
+              `Changes requested on “${t.title}”` +
+              (resubmitBy ? ` — resubmit by ${resubmitBy}` : "") +
+              `: ${note.trim()}`,
+            read: false,
+          });
+        } catch (e) {
+          console.warn("notification failed:", e?.message);
+        }
+        audit("task", id, "changes_requested", null, { resubmit_by: resubmitBy, note: note.trim() });
+        await refresh();
+        return { ok: true };
+        },
+        () => requestChanges(id, resubmitBy, note)
+      );
     },
-    [db.tasks, canReview, me, audit, refresh]
+    [db.tasks, canReview, me, audit, refresh, optimistic]
   );
 
   // Admin-only hard delete (RLS tasks_delete is admin-only too).
@@ -630,34 +738,46 @@ export function AppDataProvider({ children }) {
   // Bulk actions for the admin All Tasks view.
   const reassignTasks = useCallback(
     async (ids, userId) => {
-      for (const id of ids) {
-        await updateRow("tasks", id, { assignee_user_id: userId, assigned_by_user_id: me.id });
-        audit("task", id, "reassigned", null, { assignee_user_id: userId });
-      }
-      await refresh();
+      return optimistic(
+        patchTasks(ids, { assignee_user_id: userId, assigned_by_user_id: me.id }),
+        async () => {
+          for (const id of ids) {
+          await updateRow("tasks", id, { assignee_user_id: userId, assigned_by_user_id: me.id });
+          audit("task", id, "reassigned", null, { assignee_user_id: userId });
+        }
+        await refresh();
+        },
+        () => reassignTasks(ids, userId)
+      );
     },
-    [me, audit, refresh]
+    [me, audit, refresh, optimistic]
   );
 
   const rescheduleTasks = useCallback(
     async (ids, date) => {
-      for (const id of ids) {
-        const t = db.tasks.find((x) => x.id === id);
-        if (!t || t.due_date === date) continue;
-        await updateRow("tasks", id, {
-          due_date: date,
-          planned_for_date: date,
-          due_date_change_count: (t.due_date_change_count || 0) + 1,
-          due_date_history: [
-            ...(t.due_date_history || []),
-            { old_date: t.due_date, new_date: date, changed_by: me.id, at: nowIso(), reason: "bulk reschedule" },
-          ],
-        });
-        audit("task", id, "due_date_changed", { old: t.due_date }, { new: date });
-      }
-      await refresh();
+      return optimistic(
+        patchTasks(ids, { due_date: date, planned_for_date: date }),
+        async () => {
+          for (const id of ids) {
+          const t = db.tasks.find((x) => x.id === id);
+          if (!t || t.due_date === date) continue;
+          await updateRow("tasks", id, {
+            due_date: date,
+            planned_for_date: date,
+            due_date_change_count: (t.due_date_change_count || 0) + 1,
+            due_date_history: [
+              ...(t.due_date_history || []),
+              { old_date: t.due_date, new_date: date, changed_by: me.id, at: nowIso(), reason: "bulk reschedule" },
+            ],
+          });
+          audit("task", id, "due_date_changed", { old: t.due_date }, { new: date });
+        }
+        await refresh();
+        },
+        () => rescheduleTasks(ids, date)
+      );
     },
-    [db.tasks, me, audit, refresh]
+    [db.tasks, me, audit, refresh, optimistic]
   );
 
   // =========================================================================
@@ -695,11 +815,17 @@ export function AppDataProvider({ children }) {
 
   const resolveBlocker = useCallback(
     async (id) => {
-      await updateRow("blockers", id, { status: "resolved", resolved_at: nowIso() });
-      audit("blocker", id, "resolved", null, null);
-      await refresh();
+      return optimistic(
+        (d) => ({ ...d, blockers: d.blockers.map((b) => (b.id === id ? { ...b, status: "resolved", resolved_at: nowIso() } : b)) }),
+        async () => {
+          await updateRow("blockers", id, { status: "resolved", resolved_at: nowIso() });
+        audit("blocker", id, "resolved", null, null);
+        await refresh();
+        },
+        () => resolveBlocker(id)
+      );
     },
-    [audit, refresh]
+    [audit, refresh, optimistic]
   );
 
   // =========================================================================
@@ -1277,6 +1403,7 @@ export function AppDataProvider({ children }) {
     saveTask,
     applyStatus,
     quickToggle,
+    undoComplete,
     acceptTask,
     cancelTask,
     deleteTask,

@@ -36,6 +36,7 @@ import HubSpotActivity from "./pages/HubSpotActivity.jsx";
 import ColdCalling from "./pages/ColdCalling.jsx";
 import Settings from "./pages/Settings.jsx";
 import More from "./pages/More.jsx";
+import LoadingSkeleton from "./components/LoadingSkeleton.jsx";
 
 const ROUTES = {
   myday: MyDay,
@@ -171,7 +172,7 @@ export default function App() {
     return <Login />;
   }
   if (loadingData || !me) {
-    return <div className="loading">Loading your workspace…</div>;
+    return mobile ? <LoadingSkeleton /> : <div className="loading">Loading your workspace…</div>;
   }
 
   const Page = ROUTES[safeView] || MyDay;

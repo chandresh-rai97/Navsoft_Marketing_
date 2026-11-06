@@ -152,7 +152,7 @@ function DashboardView({ db, channels }) {
       {trackerProjects.length === 0 ? (
         <div className="empty" style={{ marginTop: 14 }}>No channels have a tracker yet.</div>
       ) : (
-        <div className="eo-wrap" ref={wrapRef} style={{ marginTop: 12 }}>
+        <div className="eo-wrap" ref={wrapRef} style={{ marginTop: 12 }} tabIndex={0} role="region" aria-label="Efforts vs Outcome grid (scrolls sideways)">
           <table className="eo-table">
             <thead>
               <tr>
@@ -393,6 +393,7 @@ function ChannelView({ projectId, canEdit }) {
                 value={addValue}
                 onChange={(e) => setAddMk(e.target.value)}
                 title="Pick the month to add (past or future), then click Add month"
+                aria-label="Month to add (past or future)"
               />
               <button className="btn sm" onClick={addMonth}>+ Add month</button>
             </span>
@@ -424,7 +425,7 @@ function ChannelView({ projectId, canEdit }) {
           No weeks yet.{canEdit ? " Pick a month and “+ Add week” to start weekly tracking." : ""}
         </div>
       ) : (
-        <div className="eo-wrap" ref={wrapRef} style={{ marginTop: 12 }}>
+        <div className="eo-wrap" ref={wrapRef} style={{ marginTop: 12 }} tabIndex={0} role="region" aria-label="Efforts vs Outcome grid (scrolls sideways)">
           <table className="eo-table">
             <thead>
               <tr>
@@ -441,7 +442,17 @@ function ChannelView({ projectId, canEdit }) {
                         has weekly · clear
                       </span>
                     )}
-                    {canEdit && <span className="eo-xbtn" title="Remove this period" onClick={() => removePeriod(pk)}>×</span>}
+                    {canEdit && (
+                      <span
+                        className="eo-xbtn"
+                        title="Remove this period"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={"Remove " + (gran === "week" ? weekLabel(pk) : monthLabel(pk))}
+                        onClick={() => removePeriod(pk)}
+                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), removePeriod(pk))}
+                      >×</span>
+                    )}
                   </th>
                 ))}
               </tr>

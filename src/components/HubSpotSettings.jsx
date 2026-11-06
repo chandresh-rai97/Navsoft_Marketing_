@@ -138,7 +138,7 @@ export default function HubSpotSettings() {
                 <tr key={i}>
                   <td><input style={inputStyle} value={p.owner_id} inputMode="numeric" aria-label="HubSpot owner ID" onChange={(e) => editPerson(i, "owner_id", e.target.value)} /></td>
                   <td><input style={inputStyle} value={p.name} aria-label="Name" onChange={(e) => editPerson(i, "name", e.target.value)} /></td>
-                  <td><input type="checkbox" checked={p.active} aria-label="Active" onChange={(e) => editPerson(i, "active", e.target.checked)} /></td>
+                  <td><label className="cb-hit"><input type="checkbox" checked={p.active} aria-label="Active" onChange={(e) => editPerson(i, "active", e.target.checked)} /></label></td>
                   <td>
                     <button className="btn sm ghost" onClick={() => setPeople((l) => l.filter((_, j) => j !== i))}>Remove</button>
                   </td>

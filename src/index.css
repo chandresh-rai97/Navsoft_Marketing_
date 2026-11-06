@@ -218,6 +218,15 @@ tr.clk { cursor: pointer; }
 .snack-btn { min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--navai-light-blue); font: inherit; font-weight: 700; cursor: pointer; }
 .snack-x { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: none; color: var(--sidebar-text-soft); cursor: pointer; }
 .ptr { display: none; }
+/* loading skeleton (phones) */
+.skel { min-height: 100vh; min-height: 100svh; background: var(--surface-page); }
+.skel-top { position: fixed; top: 0; left: 0; right: 0; height: calc(56px + env(safe-area-inset-top)); background: var(--sidebar-bg); }
+.skel-tabs { position: fixed; bottom: 0; left: 0; right: 0; height: calc(64px + env(safe-area-inset-bottom)); background: var(--surface-card); border-top: 1px solid var(--border); }
+.skel-body { padding: calc(56px + 22px + env(safe-area-inset-top)) 16px 90px; }
+.skel-card { background: var(--surface-card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px; margin-top: 10px; }
+.skel-line { height: 14px; border-radius: 7px; background: var(--paper-2); margin: 8px 0; animation: skel 1.4s ease-in-out infinite; }
+.skel-line.w60 { width: 60%; } .skel-line.w40 { width: 40%; } .skel-line.w70 { width: 70%; } .skel-line.w45 { width: 45%; }
+@keyframes skel { 50% { opacity: .55; } }
 .task-title { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
 .task-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .chip { font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--paper-2); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 5px; }
@@ -568,6 +577,10 @@ tr.clk { cursor: pointer; }
   .fab:active { background: var(--accent-pressed); }
   .hide-phone { display: none !important; }
   .select-mode .mtabs, .select-mode .fab { display: none; }
+  /* instant pressed feedback on every tap target (visible around the finger) */
+  .btn.ghost:active, .seg button:active, .hs-stage:active, .linkbtn:active, .hs-linkbtn:active { background: var(--paper-2); }
+  .btn:not(.ghost):active { background: var(--accent-pressed); }
+  .seg button.on:active { background: var(--accent-pressed); }
   .snack-live { bottom: calc(64px + 12px + env(safe-area-inset-bottom)); }
   .select-mode .snack-live { bottom: calc(64px + 12px + env(safe-area-inset-bottom)); }
   .snack { width: 100%; }
@@ -584,6 +597,15 @@ tr.clk { cursor: pointer; }
 .snack-btn { min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--navai-light-blue); font: inherit; font-weight: 700; cursor: pointer; }
 .snack-x { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: none; color: var(--sidebar-text-soft); cursor: pointer; }
 .ptr { display: none; }
+/* loading skeleton (phones) */
+.skel { min-height: 100vh; min-height: 100svh; background: var(--surface-page); }
+.skel-top { position: fixed; top: 0; left: 0; right: 0; height: calc(56px + env(safe-area-inset-top)); background: var(--sidebar-bg); }
+.skel-tabs { position: fixed; bottom: 0; left: 0; right: 0; height: calc(64px + env(safe-area-inset-bottom)); background: var(--surface-card); border-top: 1px solid var(--border); }
+.skel-body { padding: calc(56px + 22px + env(safe-area-inset-top)) 16px 90px; }
+.skel-card { background: var(--surface-card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px; margin-top: 10px; }
+.skel-line { height: 14px; border-radius: 7px; background: var(--paper-2); margin: 8px 0; animation: skel 1.4s ease-in-out infinite; }
+.skel-line.w60 { width: 60%; } .skel-line.w40 { width: 40%; } .skel-line.w70 { width: 70%; } .skel-line.w45 { width: 45%; }
+@keyframes skel { 50% { opacity: .55; } }
   /* All Tasks: one row per task, Select mode, bottom action bar */
   .at-selbar { display: flex; gap: 8px; flex-wrap: wrap; margin: -6px 0 12px; }
   .mcards { display: flex; flex-direction: column; gap: 8px; }
@@ -735,6 +757,8 @@ tr.clk { cursor: pointer; }
   .modal-bar + h2 { margin-top: 10px; }
   .phone-only { display: block; }
   .phone-inline { display: inline; }
+  .cb-hit { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -10px; cursor: pointer; }
+  .cb-hit input[type=checkbox] { width: 24px; height: 24px; }
   .phone-label.sr-only { position: static; width: auto; height: auto; margin: 10px 0 5px; overflow: visible; clip: auto; white-space: normal;
     font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
   .tm-danger { margin: 18px 0 4px; padding-top: 14px; border-top: 1px solid var(--hairline); }
@@ -851,6 +875,12 @@ tr.clk { cursor: pointer; }
    so the page never scrolls sideways. Desktop (1024px and up) is unchanged. */
 @media (min-width: 768px) and (max-width: 1023.98px) {
   .main .panel { overflow-x: auto; }
+}
+
+/* Very narrow (e.g. a 390px phone zoomed to 200%): tab labels wrap instead of being cut off. */
+@media (max-width: 299.98px) {
+  .mtab-lbl { white-space: normal; font-size: 10px; line-height: 1.1; text-align: center; hyphens: auto; overflow-wrap: anywhere; }
+  .mtab { padding: 4px 1px; }
 }
 
 /* Touch screens wider than a phone (tablets, large phones in landscape):

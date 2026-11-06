@@ -134,6 +134,7 @@ export default function TaskModal({ id, onClose }) {
         { ...form, definition_of_done: cleanDod, depends_on_user_ids: depIds },
         { reason }
       );
+      if (res && res.failed) { setBusy(false); return; } // rolled back; "Couldn't save – Retry" is showing
       if (res && res.ok === false) { setBusy(false); return dlg.alert(res.message); }
       onClose();
     } catch (e) {
@@ -146,6 +147,7 @@ export default function TaskModal({ id, onClose }) {
     setBusy(true);
     const r = await submitForReview(existing.id, proofLink.trim());
     setBusy(false);
+    if (r && r.failed) return;
     if (r && r.ok === false) return dlg.alert(r.message);
     onClose();
   }
