@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
@@ -150,10 +151,10 @@ function FollowupChart({ keys, by, monthly }) {
 export default function HubSpotActivity() {
   const [data, setData] = useState(null);
   const [loadErr, setLoadErr] = useState("");
-  const [preset, setPreset] = useState("month");
-  const [custom, setCustom] = useState({ from: null, to: null });
-  const [person, setPerson] = useState(null);
-  const [stage, setStage] = useState("");
+  const [preset, setPreset] = useViewState("hubspot.preset", "month");
+  const [custom, setCustom] = useViewState("hubspot.custom", { from: null, to: null });
+  const [person, setPerson] = useViewState("hubspot.person", null);
+  const [stage, setStage] = useViewState("hubspot.stage", "");
   const [showAll, setShowAll] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");

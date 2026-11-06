@@ -158,7 +158,7 @@ export default function TaskModal({ id, onClose }) {
   }
 
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} noHistory>
       <h2>{editing ? (readOnly ? "Task" : "Edit task") : "New task"}</h2>
 
       {/* Reviewer sees proof + Accept / Request changes; others see the outcome. */}

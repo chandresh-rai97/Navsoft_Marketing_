@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
+import { useBackClose } from "../hooks/useBackClose.js";
 
 // Imperative alert / confirm / prompt that return promises — mirrors the
 // reference's alertDlg / confirmDlg / promptDlg.
@@ -14,6 +15,9 @@ export function DialogProvider({ children }) {
       return null;
     });
   }, []);
+
+  // Back cancels an open dialog.
+  useBackClose(!!dlg, () => close(dlg?.kind === "confirm" ? false : dlg?.kind === "prompt" ? null : undefined));
 
   const api = {
     alert: (message) =>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
@@ -158,10 +159,10 @@ function TrendChart({ days }) {
 export default function Campaigns() {
   const [data, setData] = useState(null);
   const [loadErr, setLoadErr] = useState("");
-  const [tab, setTab] = useState("overview");
-  const [preset, setPreset] = useState("month");
-  const [custom, setCustom] = useState({ start: null, end: null });
-  const [region, setRegion] = useState(null);
+  const [tab, setTab] = useViewState("campaigns.tab", "overview");
+  const [preset, setPreset] = useViewState("campaigns.preset", "month");
+  const [custom, setCustom] = useViewState("campaigns.custom", { start: null, end: null });
+  const [region, setRegion] = useViewState("campaigns.region", null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [syncErr, setSyncErr] = useState("");

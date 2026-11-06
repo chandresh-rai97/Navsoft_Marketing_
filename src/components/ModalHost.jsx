@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useNav } from "../context/Nav.jsx";
+import { useApp } from "../context/AppData.jsx";
+import { useDialog } from "./Dialog.jsx";
 import TaskModal from "./modals/TaskModal.jsx";
 import StandupModal from "./modals/StandupModal.jsx";
 import CheckinModal from "./modals/CheckinModal.jsx";
@@ -19,9 +22,28 @@ export const useModals = () => useContext(ModalCtx);
 // check-in, blockers, settings editors) without prop-drilling.
 export function ModalHost({ children }) {
   const [m, setM] = useState(null);
+  const nav = useNav();
+  const { db } = useApp();
+  const dlg = useDialog();
+  // The open task lives in the URL (?task=<id> or ?task=new), so refresh and
+  // shared links reopen it and Back closes it.
+  const navRef = React.useRef(nav);
+  navRef.current = nav;
+  const taskParam = nav.task;
+  const taskId = taskParam && taskParam !== "new" ? taskParam : null;
+  const taskMissing = !!taskId && !db.tasks.some((t) => t.id === taskId);
+  useEffect(() => {
+    if (!taskMissing) return;
+    navRef.current.closeTask();
+    dlg.alert("That task wasn't found, or you don't have access to it.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskMissing]);
   const api = useMemo(
     () => ({
-      openTask: (id = null) => setM({ t: "task", id }),
+      openTask: (id = null) => {
+        setM(null);
+        navRef.current.openTask(id);
+      },
       openStandup: () => setM({ t: "standup" }),
       openCheckin: (krId) => setM({ t: "checkin", krId }),
       openBlocker: () => setM({ t: "blocker" }),
@@ -41,7 +63,7 @@ export function ModalHost({ children }) {
   return (
     <ModalCtx.Provider value={api}>
       {children}
-      {m?.t === "task" && <TaskModal id={m.id} onClose={api.close} />}
+      {taskParam && !taskMissing && <TaskModal key={taskParam} id={taskId} onClose={() => navRef.current.closeTask()} />}
       {m?.t === "standup" && <StandupModal onClose={api.close} />}
       {m?.t === "checkin" && <CheckinModal krId={m.krId} onClose={api.close} />}
       {m?.t === "blocker" && <BlockerModal onClose={api.close} />}

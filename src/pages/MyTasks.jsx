@@ -7,6 +7,7 @@ import MobileFilters from "../components/MobileFilters.jsx";
 import TaskRow from "../components/TaskRow.jsx";
 import { OPEN_STATUSES } from "../lib/logic.js";
 import { todayStr, shiftStr } from "../lib/format.js";
+import { useViewState } from "../hooks/useViewState.js";
 
 const FILTERS = [
   ["today", "Today"],
@@ -22,8 +23,8 @@ export default function MyTasks() {
   const { db, me, pname, KR, isOverdue } = useApp();
   const modals = useModals();
   const { toggle, openTask } = useTaskHandlers();
-  const [filter, setFilter] = useState("today");
-  const [group, setGroup] = useState("none");
+  const [filter, setFilter] = useViewState("mytasks.filter", "today");
+  const [group, setGroup] = useViewState("mytasks.group", "none");
   const t = todayStr();
 
   // Submitted tasks wait for review; keep them visible until accepted.

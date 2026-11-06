@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { useApp } from "../context/AppData.jsx";
 import { OPEN_STATUSES, CARRY_THRESHOLD } from "../lib/logic.js";
 import { daysSince, todayStr } from "../lib/format.js";
 import { tabAccessMap } from "../lib/tabAccess.js";
 import ThemeSwitch from "./ThemeSwitch.jsx";
+import Icon from "./Icon.jsx";
+import { canGoBackInApp } from "../lib/router.js";
 
 const MEMBER_NAV = [
   ["myday", "My Day"],
@@ -69,25 +71,24 @@ function navConfig(role, access) {
   return { "Your work": [...MEMBER_NAV, ...gate(TAB_NAV, access)] };
 }
 
-// Phone bottom bar: the four most-used tabs for each role.
-const BOTTOM_TABS = {
-  member: [["myday", "My Day", "☀"], ["mytasks", "My Tasks", "✓"], ["notifications", "Notifications", "🔔"], ["blockers", "Blockers", "⛔"]],
-  manager: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["myday", "My Day", "☀"]],
-  admin: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["myday", "My Day", "☀"]],
-  viewer: [["dashboard", "Dashboard", "▦"], ["alltasks", "All Tasks", "☰"], ["acceptance", "Acceptance", "✔"], ["done", "Done", "✓"]],
+// Phone bottom bar: four most-used screens for each role, then "More"
+// (everything else + account). [key, label, icon]
+export const BOTTOM_TABS = {
+  member: [["myday", "My Day", "sun"], ["mytasks", "My Tasks", "checks"], ["notifications", "Notifications", "bell"], ["blockers", "Blockers", "octagon"]],
+  manager: [["dashboard", "Dashboard", "grid"], ["alltasks", "All Tasks", "list"], ["acceptance", "Acceptance", "accept"], ["myday", "My Day", "sun"]],
+  admin: [["dashboard", "Dashboard", "grid"], ["alltasks", "All Tasks", "list"], ["acceptance", "Acceptance", "accept"], ["myday", "My Day", "sun"]],
+  viewer: [["dashboard", "Dashboard", "grid"], ["alltasks", "All Tasks", "list"], ["acceptance", "Acceptance", "accept"], ["people", "People", "people"]],
 };
 
-export default function Layout({ view, navigate, children }) {
-  const { me, db, signOut, canReview, unreadCount } = useApp();
-  const [menuOpen, setMenuOpen] = useState(false);
-  if (!me) return null;
-  const go = (key) => {
-    setMenuOpen(false);
-    navigate(key);
-  };
-  const cfg = navConfig(me.role, tabAccessMap(me, db));
-  const today = todayStr();
+// Sidebar groups for this user (shared with the phone "More" screen).
+export function navGroups(me, db) {
+  return navConfig(me.role, tabAccessMap(me, db));
+}
 
+// Badge counts shown next to sidebar items, bottom tabs and More rows.
+export function usePills() {
+  const { me, db, canReview, unreadCount } = useApp();
+  const today = todayStr();
   const pendingReview = db.tasks.filter(
     (t) => t.status === "done_pending_acceptance" && canReview(t)
   ).length;
@@ -107,7 +108,7 @@ export default function Layout({ view, navigate, children }) {
         (OPEN_STATUSES.includes(t.status) && t.due_date <= today))
   ).length;
 
-  const pillFor = (key) => {
+  return (key) => {
     if (key === "notifications" && unreadCount) return { text: unreadCount, warn: true };
     if (key === "blockers" && openBlockers) return { text: openBlockers, warn: false };
     if (key === "acceptance" && pendingReview) return { text: pendingReview, warn: true };
@@ -115,25 +116,62 @@ export default function Layout({ view, navigate, children }) {
     if (key === "myday" && myDayCount) return { text: myDayCount, warn: false };
     return null;
   };
+}
+
+export default function Layout({ view, arg, navigate, children }) {
+  const { me, db, signOut, unreadCount } = useApp();
+  const pillFor = usePills();
+  if (!me) return null;
+  const go = (key) => navigate(key);
+  const cfg = navConfig(me.role, tabAccessMap(me, db));
 
   const allItems = Object.values(cfg).flat();
-  const title = (allItems.find(([k]) => k === view) || [null, "Cadence"])[1];
   const tabs = BOTTOM_TABS[me.role] || BOTTOM_TABS.member;
+  const tabKeys = tabs.map(([k]) => k);
+  const title = view === "more" ? "More" : (allItems.find(([k]) => k === view) || [null, "Cadence"])[1];
+  // Screens reached from More (or a project opened from Projects) get a Back button.
+  const atRoot = (tabKeys.includes(view) || view === "more") && !arg;
+  const back = () => {
+    if (canGoBackInApp()) window.history.back();
+    else navigate(view === "grid" && arg ? "grid" : "more");
+  };
+  // Tapping the tab you're on: back to that tab's top (or its first screen).
+  const tapTab = (key) => {
+    if (key !== view) return go(key);
+    if (arg) return go(key);
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  };
+  const moreItems = allItems.filter(([k]) => !tabKeys.includes(k));
+  const moreBadge = moreItems.some(([k]) => pillFor(k));
+  // Admins and managers have no Notifications tab: a bell in the top bar instead.
+  const showBell = (me.role === "admin" || me.role === "manager") && allItems.some(([k]) => k === "notifications");
 
   return (
-    <div className={"app" + (menuOpen ? " menu-open" : "")}>
-      {/* Phones only: top bar with the menu button, and the bottom tab bar. */}
+    <div className="app">
+      {/* Phones only: top bar (Back · title · bell) and the bottom tab bar. */}
       <header className="mtop">
-        <button type="button" className="mtop-menu" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
-          ☰
-        </button>
-        <span className="mtop-title">{title}</span>
+        {!atRoot && (
+          <button type="button" className="mtop-btn" aria-label="Back" onClick={back}>
+            <Icon name="back" />
+          </button>
+        )}
+        <span className={"mtop-title" + (atRoot ? " at-root" : "")} aria-hidden="true">{title}</span>
+        <div className="mtop-actions" id="mtop-actions" />
+        {showBell && (
+          <button
+            type="button"
+            className={"mtop-btn mtop-bell" + (view === "notifications" ? " on" : "")}
+            aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
+            aria-current={view === "notifications" ? "page" : undefined}
+            onClick={() => go("notifications")}
+          >
+            <Icon name="bell" filled={view === "notifications"} />
+            {unreadCount > 0 && <span className="mtop-badge" aria-hidden="true">{unreadCount}</span>}
+          </button>
+        )}
       </header>
-      <div className="mside-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
       <nav className="side" aria-label="Main menu">
-        <button type="button" className="mside-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
-          ✕
-        </button>
         <img className="brand-logo" src="/brand/navai-lockup-light.png" alt="NavAI" />
         <div className="brand">
           Cadence
@@ -169,14 +207,17 @@ export default function Layout({ view, navigate, children }) {
         </div>
       </nav>
       <main className="main">{children}</main>
-      <nav className="mtabs" aria-label="Quick tabs">
-        {tabs.map(([key, label, icon]) => {
-          const pill = pillFor(key);
+      <nav className="mtabs" aria-label="Main">
+        {[...tabs, ["more", "More", "more"]].map(([key, label, icon]) => {
+          const active = view === key;
+          const pill = key === "more" ? null : pillFor(key);
           return (
-            <button key={key} type="button" className={"mtab" + (view === key ? " active" : "")} onClick={() => go(key)} aria-current={view === key ? "page" : undefined}>
-              <span className="mtab-ico" aria-hidden="true">{icon}</span>
+            <button key={key} type="button" className={"mtab" + (active ? " active" : "")} onClick={() => tapTab(key)} aria-current={active ? "page" : undefined}
+              aria-label={label + (pill ? `, ${pill.text}` : "") + (key === "more" && moreBadge ? ", has updates" : "")}>
+              <Icon name={icon} filled={active} className="mtab-ico" />
               <span className="mtab-lbl">{label}</span>
-              {pill && <span className={"mtab-pill" + (pill.warn ? " warn" : "")}>{pill.text}</span>}
+              {pill && <span className={"mtab-pill" + (pill.warn ? " warn" : "")} aria-hidden="true">{pill.text}</span>}
+              {key === "more" && moreBadge && <span className="mtab-dot" aria-hidden="true" />}
             </button>
           );
         })}

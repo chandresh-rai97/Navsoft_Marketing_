@@ -441,7 +441,8 @@ tr.clk { cursor: pointer; }
    Phones (narrower than 768px). Everything below is scoped to this query;
    desktop is unchanged. Phone-only elements are hidden on larger screens.
    ========================================================================== */
-.mtop, .mtabs, .mside-backdrop, .mside-close { display: none; }
+.mtop, .mtabs { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Offline notice (all screen sizes) */
 .offline-screen { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); background: var(--surface-page); color: var(--text-head); }
@@ -461,38 +462,62 @@ tr.clk { cursor: pointer; }
   /* stable full height: 100vh fallback, then the small viewport height */
   .app, .login-wrap { min-height: 100vh; min-height: 100svh; }
 
-  /* ---- app shell: top bar, slide-in menu, bottom tabs ---- */
+  /* ---- app shell: top bar, bottom tabs (the sidebar is desktop only) ---- */
   .app { display: block; }
-  .mtop { display: flex; align-items: center; gap: 6px; position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-    height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  .side { display: none; }
+  .mtop { display: flex; align-items: center; gap: 4px; position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+    height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
     background: var(--sidebar-bg); color: var(--sidebar-text); }
-  .mtop-menu { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 8px; color: var(--sidebar-text); font-size: 22px; cursor: pointer; }
-  .mtop-menu:active { background: var(--sidebar-hover); }
-  .mtop-title { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mtop-title { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mtop-title.at-root { padding-left: 12px; }
+  .mtop-actions { display: flex; align-items: center; gap: 4px; }
+  .mtop-actions:empty { display: none; }
+  .mtop-btn { position: relative; flex-shrink: 0; width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: 0; border-radius: 10px; color: var(--sidebar-text); cursor: pointer; }
+  .mtop-btn:active { background: var(--sidebar-hover); }
+  .mtop-badge { position: absolute; top: 5px; left: 26px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 20px; font-size: 13px; font-weight: 700; line-height: 20px;
+    text-align: center; background: var(--danger-solid); color: var(--on-accent); }
   .app::before { position: fixed; top: calc(56px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 39; }
-  .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: min(300px, 86vw); height: 100%;
-    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    transform: translateX(-105%); transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.35); }
-  .menu-open .side { transform: none; }
-  .mside-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: var(--overlay); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
-  .menu-open .mside-backdrop { opacity: 1; pointer-events: auto; }
-  .mside-close { display: inline-flex; align-items: center; justify-content: center; position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 8px;
-    width: 44px; height: 44px; background: none; border: 0; border-radius: 8px; color: var(--sidebar-text-soft); font-size: 20px; cursor: pointer; }
-  .navbtn { min-height: 44px; font-size: 15px; }
-  .whoami .btn.ghost { min-height: 44px; font-size: 15px; }
-  .theme-switch button { min-height: 44px; font-size: 14px; }
   .main { max-width: none; min-width: 0; overflow-x: clip;
-    padding: calc(56px + 6px + 16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(68px + 20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    padding: calc(56px + 6px + 16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(64px + 24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .mtabs { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface-card); border-top: 1px solid var(--border);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-  .mtab { position: relative; flex: 1 1 0; min-width: 0; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 4px 2px; }
-  .mtab-ico { font-size: 20px; line-height: 1; }
-  .mtab-lbl { font-size: 14px; letter-spacing: -.02em; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .mtab { --icon-cut: var(--surface-card); position: relative; flex: 1 1 0; min-width: 0; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 6px 2px; }
+  .mtab:active { background: var(--paper-2); }
+  .mtab-ico { flex-shrink: 0; }
+  .mtab-lbl { font-size: clamp(10px, 3.2vw, 12px); letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; max-width: 100%; }
   .mtab.active { color: var(--accent-text); font-weight: 700; }
-  .mtab-pill { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 20px; height: 20px; padding: 0 6px; border-radius: 20px; font-size: 14px; line-height: 20px;
+  .mtab-pill { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 20px; height: 20px; padding: 0 6px; border-radius: 20px; font-size: 13px; font-weight: 700; line-height: 20px;
     background: var(--accent); color: var(--on-accent); }
   .mtab-pill.warn { background: var(--danger-solid); }
+  .mtab-dot { position: absolute; top: 8px; left: calc(50% + 8px); width: 10px; height: 10px; border-radius: 50%; background: var(--danger-solid); }
+  /* the page heading is in the top bar; keep it for screen readers */
+  h1.page { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---- More: the rest of the screens + account ---- */
+  .more-sec { margin-bottom: 22px; }
+  .more-h { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin: 0 4px 8px; }
+  .more-list { background: var(--surface-card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .more-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 14px; background: none; border: 0; border-bottom: 1px solid var(--hairline);
+    color: var(--ink); font: inherit; font-size: 16px; text-align: left; cursor: pointer; }
+  .more-row:last-child { border-bottom: 0; }
+  button.more-row:active { background: var(--paper-2); }
+  .more-row.static { cursor: default; }
+  .more-lbl { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .more-sub { font-size: 14px; color: var(--text-muted); text-transform: capitalize; }
+  .more-chev { color: var(--text-muted); flex-shrink: 0; }
+  .more-pill { min-width: 24px; height: 24px; padding: 0 8px; border-radius: 20px; font-family: var(--mono); font-size: 14px; line-height: 24px; text-align: center;
+    background: var(--neutral-soft); color: var(--text-head); }
+  .more-pill.warn { background: var(--danger-solid); color: var(--on-accent); }
+  .more-theme { flex-wrap: wrap; }
+  .more-theme .theme-switch { margin: 0; background: var(--paper-2); flex: 1 1 200px; }
+  .more-theme .theme-switch button { color: var(--text-muted); }
+  .more-theme .theme-switch button.on { color: var(--on-accent); }
+  .more-msg { min-height: 20px; margin: 8px 4px 14px; font-size: 14px; color: var(--text-muted); }
+  .more-logout .more-lbl { color: var(--red); font-weight: 600; }
+  .navbtn { min-height: 44px; font-size: 15px; }
+  .theme-switch button { min-height: 44px; font-size: 14px; }
 
   /* ---- page header ---- */
   .topline { gap: 10px; margin-bottom: 16px; }

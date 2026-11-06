@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageHead from "../components/PageHead.jsx";
+import { useViewState } from "../hooks/useViewState.js";
 import MobileFilters from "../components/MobileFilters.jsx";
 import TabAccessButton from "../components/TabAccess.jsx";
 import { useApp } from "../context/AppData.jsx";
@@ -152,13 +153,13 @@ export default function ColdCalling() {
   const [data, setData] = useState(null);
   const [loadErr, setLoadErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [preset, setPreset] = useState("all");
-  const [custom, setCustom] = useState({ from: null, to: null });
-  const [caller, setCaller] = useState(null);
-  const [region, setRegion] = useState(null);
-  const [product, setProduct] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [fu, setFu] = useState("all");
+  const [preset, setPreset] = useViewState("cc.preset", "all");
+  const [custom, setCustom] = useViewState("cc.custom", { from: null, to: null });
+  const [caller, setCaller] = useViewState("cc.caller", null);
+  const [region, setRegion] = useViewState("cc.region", null);
+  const [product, setProduct] = useViewState("cc.product", "");
+  const [industry, setIndustry] = useViewState("cc.industry", "");
+  const [fu, setFu] = useViewState("cc.fu", "all");
   const [fuAll, setFuAll] = useState(false);
 
   const reload = useCallback(async () => {

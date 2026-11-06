@@ -5,6 +5,8 @@ import { useTaskHandlers } from "../hooks/useTaskHandlers.js";
 import PageHead from "../components/PageHead.jsx";
 import TaskRow, { ProjectDot } from "../components/TaskRow.jsx";
 import { OPEN_STATUSES } from "../lib/logic.js";
+import { useNav } from "../context/Nav.jsx";
+import { canGoBackInApp } from "../lib/router.js";
 
 // "Projects" — a grid of summary boxes (one per project). Click a box to open
 // that project's full task list, team, and (for its manager) member controls.
@@ -24,13 +26,22 @@ export default function Grid() {
   } = useApp();
   const modals = useModals();
   const { toggle, openTask } = useTaskHandlers();
-  const [selected, setSelected] = useState(null);
+  // The open project is part of the URL (/projects/<id>).
+  const { arg, navigate, replace } = useNav();
+  const selected = arg?.project || null;
+  const setSelected = (id) => {
+    if (id) navigate("grid", { project: id });
+    else if (canGoBackInApp()) window.history.back();
+    else navigate("grid");
+  };
+
 
   const projectsList = scopedProjects();
 
   // If the selected project disappears (e.g. archived), fall back to the grid.
   useEffect(() => {
-    if (selected && !db.projects.find((x) => x.id === selected)) setSelected(null);
+    if (selected && !projectsList.find((x) => x.id === selected)) replace("grid");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, db.projects]);
 
   function counts(pid) {
@@ -74,7 +85,7 @@ export default function Grid() {
 
   // ---- project detail ----
   const p = db.projects.find((x) => x.id === selected);
-  if (!p) return null; // effect above will reset the selection
+  if (!p || !projectsList.find((x) => x.id === p.id)) return null; // effect above resets the URL
   const tks = db.tasks
     .filter((t) => t.project_id === p.id && t.status !== "cancelled")
     .sort((a, b) => a.due_date.localeCompare(b.due_date));

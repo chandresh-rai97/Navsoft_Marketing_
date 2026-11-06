@@ -3,6 +3,10 @@ import { useApp } from "../context/AppData.jsx";
 import { useModals } from "../components/ModalHost.jsx";
 import { useDialog } from "../components/Dialog.jsx";
 import PageHead from "../components/PageHead.jsx";
+import { useBackClose } from "../hooks/useBackClose.js";
+import { useViewState } from "../hooks/useViewState.js";
+import { useNav } from "../context/Nav.jsx";
+import { replaceRoute } from "../lib/router.js";
 import EoCell from "../components/EoCell.jsx";
 import {
   computeChannelV2,
@@ -67,10 +71,30 @@ export default function EffortsOutcome() {
     [allChannels, db.users] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const canSeeDashboard = isAdmin() || isViewer();
-  const [channel, setChannel] = useState(canSeeDashboard ? "dashboard" : null);
+  // The chosen channel is in the URL (?project=<id>) and remembered for this visit.
+  const { arg } = useNav();
+  const [channel, setChannelState] = useViewState(
+    "efforts.channel",
+    arg?.project || (canSeeDashboard ? "dashboard" : null)
+  );
   useEffect(() => {
-    if (!canSeeDashboard && channel === null && myChannels[0]) setChannel(myChannels[0].id);
+    if (arg?.project && arg.project !== channel) setChannelState(arg.project);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arg?.project]);
+  const setChannel = (v) => {
+    setChannelState(v);
+    replaceRoute("efforts", v && v !== "dashboard" ? { project: v } : null);
+  };
+  useEffect(() => {
+    if (!canSeeDashboard && channel === null && myChannels[0]) setChannelState(myChannels[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canSeeDashboard, channel, myChannels]);
+  // A channel from an old link that you can't see: fall back to the default.
+  useEffect(() => {
+    const ok = channel === null || (channel === "dashboard" ? canSeeDashboard : myChannels.some((p) => p.id === channel));
+    if (!ok) setChannel(canSeeDashboard ? "dashboard" : myChannels[0]?.id || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel, canSeeDashboard, myChannels]);
 
   return (
     <>
@@ -431,6 +455,7 @@ function ChannelView({ projectId, canEdit }) {
 }
 
 function ColumnsMenu({ prefs, setPrefs, close }) {
+  useBackClose(true, close);
   const pins = new Set([...(prefs.pins || []), "name"]);
   const hiddenCfg = new Set(prefs.hiddenCfg || []);
   const hiddenSub = new Set(prefs.hiddenSub || []);

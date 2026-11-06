@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useApp } from "../context/AppData.jsx";
 import { useNav } from "../context/Nav.jsx";
 import { useModals } from "../components/ModalHost.jsx";
@@ -10,6 +10,7 @@ import { ProjectDot, StatusTag } from "../components/TaskRow.jsx";
 import { STATUSES, STATUS_LABEL, CARRY_THRESHOLD, MOVE_REASON_AFTER } from "../lib/logic.js";
 import { fmtDate, todayStr, shiftStr } from "../lib/format.js";
 import { toCSV, downloadText } from "../lib/csv.js";
+import { useViewState } from "../hooks/useViewState.js";
 
 // Which date column to filter on.
 const DATE_FIELDS = [
@@ -58,15 +59,20 @@ export default function AllTasks() {
   const modals = useModals();
   const dlg = useDialog();
 
-  const [f, setF] = useState({
+  const [f, setF] = useViewState("alltasks.f", {
     assignee: "",
     status: "",
-    project: arg?.project || "",
-    kr: arg?.kr || "",
+    project: "",
+    kr: "",
     quick: "",
   });
+  // A link to /tasks?project=…&kr=… sets those filters.
+  useEffect(() => {
+    if (arg?.project || arg?.kr) setF((x) => ({ ...x, project: arg.project || "", kr: arg.kr || "" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arg?.project, arg?.kr]);
   const mobile = useIsMobile();
-  const [dateF, setDateF] = useState({ field: "due_date", op: "", v1: "", v2: "" });
+  const [dateF, setDateF] = useViewState("alltasks.dateF", { field: "due_date", op: "", v1: "", v2: "" });
   const [sel, setSel] = useState({});
   const [bulkUser, setBulkUser] = useState("");
   const [bulkDate, setBulkDate] = useState(todayStr());

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useBackClose } from "../hooks/useBackClose.js";
 
 // On phones, filter rows collapse into one "Filters" button that opens a panel
 // from the bottom. On larger screens the children render exactly as before.
@@ -13,6 +14,7 @@ export default function MobileFilters({ count = 0, children }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+  useBackClose(open && mobile, () => setOpen(false));
   if (!mobile) return <>{children}</>;
   return (
     <>
