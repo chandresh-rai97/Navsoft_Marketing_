@@ -165,3 +165,35 @@ Behaviour changes on desktop (all approved):
 - Notch and home-indicator spacing.
 - Pull-to-refresh in the installed app on both.
 - Tap speed with your real data.
+
+---
+
+# Round 2: layout and hierarchy fixes (phones)
+
+The previous version is saved as branch **`mobile-v1`** (commit `52fe890`). To go back, restore `main` to that commit's content.
+
+| # | Change | Rule |
+|---|---|---|
+| 1 | Grey description under the header hidden on phones; kept on desktop. Campaigns keeps its line because it shows live totals. | Content first, Hick |
+| 2 | One term: "Pushed 3+ times" (Dashboard header, filter chips). Short chips read "Pushed 3+". | Jakob / consistency |
+| 3 | Phone labels in sentence case, no ALL CAPS (fields, stats, table headers, section counts, More). The Dashboard's "… Tasks" boxes are replaced. | Readability |
+| 4 | Bottom bar: equal-width items, icon over a one-line label, the same label size on every item. | Fitts, consistency |
+| 5 | One 24 px icon set, 2 px stroke; outline when inactive, solid + accent colour when active. | Consistency |
+| 6 | Badges only where you have something to act on: Acceptance and the bell (unread notifications). Removed from Dashboard, My Day and Blockers. 17 px tall, capped at "99+", at the icon's top-right without covering it. | Signal vs noise |
+| 7 | Web app manifest was already there: `display: standalone`, `theme_color #101010` (the header colour), safe-area padding. No change needed. | — |
+| 8 | All Tasks: search → chip row → "N tasks" → list. | Hierarchy |
+| 9 | Chips [Filters (n)] [Overdue] [Blocked] [Pushed 3+] toggle instantly; filters set in the sheet also show as removable chips. | Fitts |
+| 10 | "Select tasks" (and "Select all") moved into the top-bar ⋯ menu; long-press a card still works. | Hick |
+| 11 | Phone order: Overdue · Due soon (7 days) · In progress · Later · Done · Cancelled; Done and Cancelled start collapsed. Sticky group headers with counts. Desktop order unchanged (you asked to be consulted first). | Serial position, chunking |
+| 12 | Card meta on two fixed lines: line 1 is the due date (red, starting "Overdue ·" when late) and the person; line 2 is the project and the status pill. Long names end with "…", so cards never overflow. | Scannability |
+| 13 | The All/Overdue/Blocked/Pushed control removed from the filter sheet. | No duplication |
+| 14 | A visible label above each field: Person, Status, Project, Key result, Date. | Visible labels |
+| 15 | One Date choice: Any date / Due today / Due this week / Due before today / Custom range (From–To). It uses the due date only, so no Due/Created toggle. | Hick |
+| 16 | Sheet footer: "Clear all" + "Show N tasks", with a live count. | Visibility of system status |
+| 17 | Dashboard period switch: Today / This week / This month. | — |
+| 18 | "Needs attention": Overdue, Awaiting acceptance, Blocked as large tappable numbers. Each opens All Tasks with that filter in the URL (`/tasks?quick=overdue`, `?status=done_pending_acceptance`, `?quick=blocked`). These count right now, across all dates. | Fitts, Von Restorff |
+| 19 | Team on-time %: tasks finished in the period that met their original due date. One large number, a bar, and the change vs the previous period. | — |
+| 20 | Status mix: one stacked bar (Done / In progress / Pending / Overdue) for tasks due in the period, a legend with counts and a "N total due …" caption. | Chunking |
+| 21 | Who's lagging: name left; on-time % right with a small bar. Second line like "7 overdue · 5 pushed 3+ times", with zero values hidden. "No due tasks yet" replaces "–". Tapping a row opens that person's tasks (`/tasks?assignee=…`). | Fitts |
+
+**Desktop:** unchanged apart from item 2. The Dashboard's table header now reads "Pushed 3+ times" (99 of 101 comparison screenshots identical; the other changed screenshots are that header).

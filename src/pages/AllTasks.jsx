@@ -71,13 +71,19 @@ export default function AllTasks() {
     kr: "",
     quick: "",
   });
-  // A link to /tasks?project=…&kr=… sets those filters.
+  // A link like /tasks?quick=overdue, ?status=…, ?assignee=<id>, ?project=…
+  // shows exactly that filter (e.g. from the Dashboard's numbers).
+  const argKey = arg ? JSON.stringify(arg) : "";
   useEffect(() => {
-    if (arg?.project || arg?.kr) setF((x) => ({ ...x, project: arg.project || "", kr: arg.kr || "" }));
+    if (!arg) return;
+    setF({ assignee: arg.assignee || "", status: arg.status || "", project: arg.project || "", kr: arg.kr || "", quick: arg.quick || "" });
+    setDateF({ field: "due_date", op: "", v1: "", v2: "" });
+    setQ("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arg?.project, arg?.kr]);
+  }, [argKey]);
   const mobile = useIsMobile();
   const longPress = useLongPress();
+  const [q, setQ] = useViewState("alltasks.q", ""); // phones: search
   const [dateF, setDateF] = useViewState("alltasks.dateF", { field: "due_date", op: "", v1: "", v2: "" });
   const [sel, setSel] = useState({});
   const [bulkUser, setBulkUser] = useState("");
@@ -128,9 +134,67 @@ export default function AllTasks() {
     if (f.quick === "blocked") r = r.filter((t) => t.status === "blocked");
     if (f.quick === "carried") r = r.filter((t) => t.carry_forward_count >= CARRY_THRESHOLD);
     r = r.filter(matchesDate);
+    const needle = mobile ? q.trim().toLowerCase() : "";
+    if (needle) {
+      r = r.filter((t) =>
+        [t.title, t.description, uname(t.assignee_user_id), pname(t.project_id)].some((x) => (x || "").toLowerCase().includes(needle))
+      );
+    }
     return r.sort((a, b) => a.due_date.localeCompare(b.due_date));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db.tasks, f, dateF, isOverdue]);
+  }, [db.tasks, f, dateF, isOverdue, q, mobile]);
+
+  // ---- phones: filter sheet, one Date choice, groups ----
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useViewState("alltasks.openGroups", {});
+  const today = todayStr();
+  const weekStart = (() => { const dow = (new Date(today + "T00:00:00").getDay() + 6) % 7; return shiftStr(today, -dow); })();
+  const weekEnd = shiftStr(weekStart, 6);
+  const datePreset =
+    !dateF.op ? "any"
+      : dateF.field !== "due_date" ? "other"
+      : dateF.op === "is" && dateF.v1 === today ? "today"
+      : dateF.op === "between" && dateF.v1 === weekStart && dateF.v2 === weekEnd ? "week"
+      : dateF.op === "before" && dateF.v1 === today ? "overdue"
+      : dateF.op === "between" ? "custom" : "other";
+  const pickDatePreset = (v) => {
+    const d = { field: "due_date", op: "", v1: "", v2: "" };
+    if (v === "today") Object.assign(d, { op: "is", v1: today });
+    if (v === "week") Object.assign(d, { op: "between", v1: weekStart, v2: weekEnd });
+    if (v === "overdue") Object.assign(d, { op: "before", v1: today });
+    if (v === "custom") Object.assign(d, { op: "between", v1: dateF.v1 || today, v2: dateF.v2 || shiftStr(today, 7) });
+    setDateF(d);
+  };
+  const sheetCount = [f.assignee, f.status, f.project, f.kr].filter(Boolean).length + (dateF.op ? 1 : 0);
+  const DATE_LABEL = { today: "Due today", week: "Due this week", overdue: "Due before today", custom: `Due ${dateF.v1 ? fmtDate(dateF.v1) : ""}–${dateF.v2 ? fmtDate(dateF.v2) : ""}`, other: "Date filter" };
+  const clearSheet = () => {
+    setF((x) => ({ ...x, assignee: "", status: "", project: "", kr: "" }));
+    setDateF({ field: "due_date", op: "", v1: "", v2: "" });
+  };
+  // Phone order: Overdue, Due soon (7 days), In progress, Later, then Done and
+  // Cancelled collapsed at the end. (Desktop keeps its due-date order.)
+  const GROUPS = [
+    ["overdue", "Overdue"],
+    ["soon", "Due soon"],
+    ["progress", "In progress"],
+    ["later", "Later"],
+    ["done", "Done"],
+    ["cancelled", "Cancelled"],
+  ];
+  const groupOf = (t) =>
+    t.status === "done" ? "done"
+      : t.status === "cancelled" ? "cancelled"
+      : isOverdue(t) ? "overdue"
+      : t.status === "in_progress" ? "progress"
+      : t.due_date && t.due_date <= shiftStr(today, 7) ? "soon"
+      : "later";
+  const grouped = useMemo(() => {
+    const g = Object.fromEntries(GROUPS.map(([k]) => [k, []]));
+    if (mobile) rows.forEach((t) => g[groupOf(t)].push(t));
+    return g;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, mobile]);
+  const groupOpen = (k) => (k in openGroups ? openGroups[k] : k !== "done" && k !== "cancelled");
 
   const canBulk = isManager();
   // Phones: select mode, bulk-action sheets and paging (100 rows at a time).
@@ -213,7 +277,14 @@ export default function AllTasks() {
         }
       />
 
-      <TopBar menu={[isAdmin() && { label: "Download CSV", onClick: downloadCsv }]} />
+      <TopBar
+        menu={[
+          canBulk && { label: selecting ? "Stop selecting" : "Select tasks", onClick: () => (selecting ? exitSelect() : setSelecting(true)) },
+          canBulk && selecting && { label: `Select all ${rows.length}`, onClick: () => setSel(Object.fromEntries(rows.map((t) => [t.id, true]))) },
+          isAdmin() && { label: "Download CSV", onClick: downloadCsv },
+        ]}
+      />
+      {!mobile && (
       <MobileFilters
         count={Object.values(f).filter(Boolean).length + (dateF.op ? 1 : 0)}
         chips={[
@@ -221,7 +292,7 @@ export default function AllTasks() {
           f.status && { label: STATUS_LABEL[f.status] || f.status, clear: () => set("status", "") },
           f.project && { label: pname(f.project), clear: () => set("project", "") },
           f.kr && { label: "KR: " + (db.keyResults.find((k) => k.id === f.kr)?.title || "…"), clear: () => set("kr", "") },
-          f.quick && { label: { overdue: "Overdue", blocked: "Blocked", carried: "Pushed 3+×" }[f.quick], clear: () => set("quick", "") },
+          f.quick && { label: { overdue: "Overdue", blocked: "Blocked", carried: "Pushed 3+ times" }[f.quick], clear: () => set("quick", "") },
           dateF.op && { label: "Date filter", clear: () => setDateF({ field: dateF.field, op: "", v1: "", v2: "" }) },
         ]}
       >
@@ -251,7 +322,7 @@ export default function AllTasks() {
             ))}
           </select>
           <div className="seg">
-            {[["", "All"], ["overdue", "Overdue"], ["blocked", "Blocked"], ["carried", "Pushed 3+×"]].map(
+            {[["", "All"], ["overdue", "Overdue"], ["blocked", "Blocked"], ["carried", "Pushed 3+"]].map(
               ([k, l]) => (
                 <button key={k} className={f.quick === k ? "on" : ""} onClick={() => set("quick", k)}>
                   {l}
@@ -301,7 +372,117 @@ export default function AllTasks() {
           )}
         </div>
       </MobileFilters>
+      )}
 
+      {mobile && (
+        <div className="at-top">
+          <div className="at-search">
+            <label className="sr-only" htmlFor="at-q">Search tasks</label>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="at-q" type="search" inputMode="search" enterKeyHint="search" autoComplete="off" placeholder="Search tasks, people, projects" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+          <ul className="chiprow" aria-label="Filters">
+            <li>
+              <button type="button" className={"fchip" + (sheetCount ? " on" : "")} aria-haspopup="dialog" onClick={() => setSheetOpen(true)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                Filters{sheetCount ? ` (${sheetCount})` : ""}
+              </button>
+            </li>
+            {[["overdue", "Overdue"], ["blocked", "Blocked"], ["carried", "Pushed 3+"]].map(([k, l]) => (
+              <li key={k}>
+                <button type="button" className={"fchip" + (f.quick === k ? " on" : "")} aria-pressed={f.quick === k} onClick={() => set("quick", f.quick === k ? "" : k)}>
+                  {l}
+                </button>
+              </li>
+            ))}
+            {[
+              f.assignee && { label: uname(f.assignee), clear: () => set("assignee", "") },
+              f.status && { label: STATUS_LABEL[f.status] || f.status, clear: () => set("status", "") },
+              f.project && { label: pname(f.project), clear: () => set("project", "") },
+              f.kr && { label: db.keyResults.find((k) => k.id === f.kr)?.title || "Key result", clear: () => set("kr", "") },
+              dateF.op && { label: DATE_LABEL[datePreset] || "Date filter", clear: () => setDateF({ field: "due_date", op: "", v1: "", v2: "" }) },
+            ]
+              .filter(Boolean)
+              .map((c) => (
+                <li key={c.label}>
+                  <button type="button" className="fchip on removable" onClick={c.clear} aria-label={`Remove filter: ${c.label}`}>
+                    <span>{c.label}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                  </button>
+                </li>
+              ))}
+          </ul>
+          <div className="at-count" role="status" aria-live="polite">
+            {rows.length} {rows.length === 1 ? "task" : "tasks"}
+          </div>
+        </div>
+      )}
+      {mobile && sheetOpen && (
+        <Sheet
+          title="Filters"
+          onClose={() => setSheetOpen(false)}
+          footer={
+            <div className="sheet-foot-row">
+              <button type="button" className="textbtn" onClick={clearSheet} disabled={!sheetCount}>Clear all</button>
+              <button type="button" className="btn" onClick={() => setSheetOpen(false)}>
+                Show {rows.length} {rows.length === 1 ? "task" : "tasks"}
+              </button>
+            </div>
+          }
+        >
+          <div className="field">
+            <label htmlFor="atf-person">Person</label>
+            <select id="atf-person" value={f.assignee} onChange={(e) => set("assignee", e.target.value)}>
+              <option value="">Anyone</option>
+              {activeUsers().map((u) => (<option key={u.id} value={u.id}>{u.name}</option>))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="atf-status">Status</label>
+            <select id="atf-status" value={f.status} onChange={(e) => set("status", e.target.value)}>
+              <option value="">Any status</option>
+              {STATUSES.map((x) => (<option key={x} value={x}>{STATUS_LABEL[x]}</option>))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="atf-project">Project</label>
+            <select id="atf-project" value={f.project} onChange={(e) => set("project", e.target.value)}>
+              <option value="">Any project</option>
+              {scopedProjects().map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="atf-kr">Key result</label>
+            <select id="atf-kr" value={f.kr} onChange={(e) => set("kr", e.target.value)}>
+              <option value="">Any key result</option>
+              {db.keyResults.map((k) => (<option key={k.id} value={k.id}>{k.title}</option>))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="atf-date">Date</label>
+            <select id="atf-date" value={datePreset} onChange={(e) => pickDatePreset(e.target.value)}>
+              <option value="any">Any date</option>
+              <option value="today">Due today</option>
+              <option value="week">Due this week</option>
+              <option value="overdue">Due before today</option>
+              <option value="custom">Custom range</option>
+              {datePreset === "other" && <option value="other">Set on desktop</option>}
+            </select>
+          </div>
+          {datePreset === "custom" && (
+            <div className="row2">
+              <div className="field">
+                <label htmlFor="atf-from">From</label>
+                <input id="atf-from" type="date" value={dateF.v1} onChange={(e) => setD("v1", e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="atf-to">To</label>
+                <input id="atf-to" type="date" value={dateF.v2} onChange={(e) => setD("v2", e.target.value)} />
+              </div>
+            </div>
+          )}
+        </Sheet>
+      )}
       {canBulk && !mobile && selectedIds.length > 0 && (
         <div className="panel" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <strong style={{ fontSize: 13 }}>{selectedIds.length} selected</strong>
@@ -334,63 +515,68 @@ export default function AllTasks() {
       {rows.length === 0 ? (
         <div className="empty">No tasks match.</div>
       ) : mobile ? (
-        // Phones: one row per task (tap opens it). "Select" shows checkboxes and
-        // a bottom bar with the bulk actions; long-press a row to start selecting.
+        // Phones: grouped list — Overdue, Due soon, In progress, Later, then Done
+        // and Cancelled (collapsed). Tap a task to open it; in select mode a tap
+        // selects it. Long-press a task to start selecting.
         <>
-          {canBulk && (
-            <div className="at-selbar">
-              <button type="button" className="btn ghost" aria-pressed={selecting} onClick={() => (selecting ? exitSelect() : setSelecting(true))}>
-                {selecting ? "Done selecting" : "Select"}
-              </button>
-              {selecting && (
-                <button type="button" className="btn ghost" onClick={() => setSel(allChecked ? {} : Object.fromEntries(rows.map((t) => [t.id, true])))}>
-                  {allChecked ? "Clear all" : `Select all ${rows.length}`}
-                </button>
-              )}
-            </div>
-          )}
-          <div className="mcards" role="list">
-            {rows.slice(0, shown).map((t) => (
-              <div
-                key={t.id}
-                role="listitem"
-                className={"mcard" + (selecting ? " selecting" : "") + (sel[t.id] ? " on" : "")}
-                {...longPress(() => { setSelecting(true); setSel((x) => ({ ...x, [t.id]: true })); })}
-              >
-                {selecting && (
-                  <label className="mcard-check">
-                    <input
-                      type="checkbox"
-                      aria-label={"Select " + t.title}
-                      checked={!!sel[t.id]}
-                      onChange={(e) => setSel((x) => ({ ...x, [t.id]: e.target.checked }))}
-                    />
-                  </label>
-                )}
-                <div className="mcard-main">
-                  <button
-                    type="button"
-                    className="mcard-title"
-                    onClick={() => (selecting ? setSel((x) => ({ ...x, [t.id]: !x[t.id] })) : modals.openTask(t.id))}
-                  >
-                    {t.title}
-                  </button>
-                  <div className="task-meta">
-                    <StatusTag status={t.status} />
-                    <span>{uname(t.assignee_user_id)}</span>
-                    <span>Due {fmtDate(t.due_date)}</span>
-                    {isOverdue(t) && <span className="warnflag">Overdue</span>}
-                    {t.carry_forward_count >= CARRY_THRESHOLD && <span className="warnflag">↻{t.carry_forward_count}</span>}
-                    {t.due_date_change_count >= MOVE_REASON_AFTER && <span className="movedflag">moved {t.due_date_change_count}×</span>}
-                    <span>
-                      <ProjectDot projectId={t.project_id} />
-                      {pname(t.project_id)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {(() => {
+            let budget = shown;
+            return GROUPS.filter(([k]) => grouped[k].length).map(([k, label]) => {
+              const list = grouped[k];
+              const isOpen = groupOpen(k);
+              const visible = isOpen ? list.slice(0, Math.max(0, budget)) : [];
+              if (isOpen) budget -= visible.length;
+              return (
+                <section key={k} className="at-group" aria-labelledby={"atg-" + k}>
+                  <h2 className="at-group-h" id={"atg-" + k}>
+                    <button type="button" aria-expanded={isOpen} onClick={() => setOpenGroups((o) => ({ ...o, [k]: !isOpen }))}>
+                      <span>{label}</span>
+                      <span className="at-group-n">{list.length}</span>
+                      <svg className="at-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                  </h2>
+                  {visible.length > 0 && (
+                    <div className="mcards" role="list">
+                      {visible.map((t) => {
+                        const od = isOverdue(t);
+                        return (
+                          <div
+                            key={t.id}
+                            role="listitem"
+                            className={"mcard" + (selecting ? " selecting" : "") + (sel[t.id] ? " on" : "")}
+                            {...longPress(() => { setSelecting(true); setSel((x) => ({ ...x, [t.id]: true })); })}
+                          >
+                            {selecting && (
+                              <label className="mcard-check">
+                                <input type="checkbox" aria-label={"Select " + t.title} checked={!!sel[t.id]}
+                                  onChange={(e) => setSel((x) => ({ ...x, [t.id]: e.target.checked }))} />
+                              </label>
+                            )}
+                            <div className="mcard-main">
+                              <button type="button" className="mcard-title"
+                                onClick={() => (selecting ? setSel((x) => ({ ...x, [t.id]: !x[t.id] })) : modals.openTask(t.id))}>
+                                {t.title}
+                              </button>
+                              <div className="mcard-meta">
+                                <div className="mm-line">
+                                  <span className={"mm-due" + (od ? " warnflag" : "")}>{od ? "Overdue · " : "Due "}{fmtDate(t.due_date)}</span>
+                                  <span className="mm-ell">{uname(t.assignee_user_id)}</span>
+                                </div>
+                                <div className="mm-line">
+                                  <span className="mm-ell"><ProjectDot projectId={t.project_id} />{pname(t.project_id)}</span>
+                                  <StatusTag status={t.status} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            });
+          })()}
           {rows.length > shown && (
             <button type="button" className="btn ghost at-more" onClick={() => setShown((n) => n + PAGE)}>
               Show {Math.min(PAGE, rows.length - shown)} more ({rows.length - shown} left)

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useApp } from "../context/AppData.jsx";
 import { useNav } from "../context/Nav.jsx";
-import { BOTTOM_TABS, navGroups, usePills } from "../components/Layout.jsx";
+import { BOTTOM_TABS, BADGE_TABS, navGroups, usePills } from "../components/Layout.jsx";
 import ThemeSwitch from "../components/ThemeSwitch.jsx";
 import Icon from "../components/Icon.jsx";
 
@@ -39,11 +39,11 @@ export default function More() {
           <h2 className="more-h" id={"more-" + g}>{g}</h2>
           <div className="more-list">
             {items.map(([key, label]) => {
-              const pill = pillFor(key);
+              const pill = BADGE_TABS.includes(key) ? pillFor(key) : null;
               return (
                 <button key={key} type="button" className="more-row" onClick={() => navigate(key)}>
                   <span className="more-lbl">{label}</span>
-                  {pill && <span className={"more-pill" + (pill.warn ? " warn" : "")}>{pill.text}</span>}
+                  {pill && <span className={"more-pill" + (pill.warn ? " warn" : "")}>{pill.text > 99 ? "99+" : pill.text}</span>}
                   <Icon name="chevron" size={18} className="more-chev" />
                 </button>
               );

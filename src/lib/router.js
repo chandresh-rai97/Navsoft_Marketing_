@@ -29,6 +29,8 @@ export const PATHS = {
   settings: "/settings",
   more: "/more",
 };
+// All Tasks filters that can be set from the URL.
+const ATF = ["assignee", "status", "project", "kr", "quick"];
 const VIEW_BY_PATH = Object.fromEntries(Object.entries(PATHS).map(([v, p]) => [p, v]));
 
 // URL -> { view, arg, task }. view is null for "/" or an unknown path.
@@ -43,8 +45,9 @@ export function parseLocation(loc = window.location) {
     arg = { project: decodeURIComponent(m[1]) };
   } else if (view === "efforts" && q.get("project")) {
     arg = { project: q.get("project") };
-  } else if (view === "alltasks" && (q.get("project") || q.get("kr"))) {
-    arg = { project: q.get("project") || "", kr: q.get("kr") || "" };
+  } else if (view === "alltasks" && ATF.some((k) => q.get(k))) {
+    // All Tasks filters from a link, e.g. /tasks?quick=overdue or ?assignee=<id>
+    arg = Object.fromEntries(ATF.map((k) => [k, q.get(k) || ""]));
   }
   return { view, arg, task: q.get("task") || null };
 }
@@ -55,8 +58,7 @@ export function buildUrl(view, arg = null, task = null) {
   if (view === "grid" && arg?.project) path = `/projects/${encodeURIComponent(arg.project)}`;
   else if (view === "efforts" && arg?.project) q.set("project", arg.project);
   else if (view === "alltasks" && arg) {
-    if (arg.project) q.set("project", arg.project);
-    if (arg.kr) q.set("kr", arg.kr);
+    ATF.forEach((k) => arg[k] && q.set(k, arg[k]));
   }
   if (task) q.set("task", task);
   const qs = q.toString();

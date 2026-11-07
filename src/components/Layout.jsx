@@ -83,6 +83,9 @@ export const BOTTOM_TABS = {
   viewer: [["dashboard", "Dashboard", "grid"], ["alltasks", "All Tasks", "list"], ["acceptance", "Acceptance", "accept"], ["people", "People", "people"]],
 };
 
+// Only these get a count on the phone's bottom bar / More: things waiting for you.
+export const BADGE_TABS = ["acceptance", "notifications"];
+
 // Sidebar groups for this user (shared with the phone "More" screen).
 export function navGroups(me, db) {
   return navConfig(me.role, tabAccessMap(me, db));
@@ -157,7 +160,7 @@ export default function Layout({ view, arg, navigate, children }) {
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   };
   const moreItems = allItems.filter(([k]) => !tabKeys.includes(k));
-  const moreBadge = moreItems.some(([k]) => pillFor(k));
+  const moreBadge = moreItems.some(([k]) => BADGE_TABS.includes(k) && pillFor(k));
   // Admins and managers have no Notifications tab: a bell in the top bar instead.
   const showBell = (me.role === "admin" || me.role === "manager") && allItems.some(([k]) => k === "notifications");
 
@@ -180,7 +183,7 @@ export default function Layout({ view, arg, navigate, children }) {
             onClick={() => go("notifications")}
           >
             <Icon name="bell" filled={view === "notifications"} />
-            {unreadCount > 0 && <span className="mtop-badge" aria-hidden="true">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="mtop-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}
           </button>
         )}
         <div className="mtop-actions" id="mtop-actions" />
@@ -230,13 +233,14 @@ export default function Layout({ view, arg, navigate, children }) {
       <nav className="mtabs" aria-label="Main">
         {[...tabs, ["more", "More", "more"]].map(([key, label, icon]) => {
           const active = view === key;
-          const pill = key === "more" ? null : pillFor(key);
+          // Phone tabs: badges only where there's something to act on.
+          const pill = BADGE_TABS.includes(key) ? pillFor(key) : null;
           return (
             <button key={key} type="button" className={"mtab" + (active ? " active" : "")} onClick={() => tapTab(key)} aria-current={active ? "page" : undefined}
               aria-label={label + (pill ? `, ${pill.text}` : "") + (key === "more" && moreBadge ? ", has updates" : "")}>
               <Icon name={icon} filled={active} className="mtab-ico" />
               <span className="mtab-lbl">{label}</span>
-              {pill && <span className={"mtab-pill" + (pill.warn ? " warn" : "")} aria-hidden="true">{pill.text}</span>}
+              {pill && <span className={"mtab-pill" + (pill.warn ? " warn" : "")} aria-hidden="true">{pill.text > 99 ? "99+" : pill.text}</span>}
               {key === "more" && moreBadge && <span className="mtab-dot" aria-hidden="true" />}
             </button>
           );

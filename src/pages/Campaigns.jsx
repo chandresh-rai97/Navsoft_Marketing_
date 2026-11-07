@@ -301,6 +301,7 @@ export default function Campaigns() {
       {accessOpen && <AccessPanel tabKey="campaigns" onClose={() => setAccessOpen(false)} />}
       <PageHead
         title="Instantly campaigns by region"
+        subPhone
         sub={
           <>
             {rangeLabel(preset, from, to)}: <b>{dash(fmtNum(v.t.sent))}</b> emails sent across{" "}
